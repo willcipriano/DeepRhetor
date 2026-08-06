@@ -37,7 +37,10 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Commit the pragma transaction so Alembic's version stamps are not
+        # rolled back with an outer SQLAlchemy 2.0 transaction on SQLite.
         connection.execute(text("PRAGMA foreign_keys=ON"))
+        connection.commit()
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

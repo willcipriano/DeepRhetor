@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def sqlite_url(path: Path | str, *, async_: bool = False) -> str:
