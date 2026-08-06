@@ -24,3 +24,8 @@ build/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local live runs
+projects/
+*.deeprhetor
+*.deeprhetor-*

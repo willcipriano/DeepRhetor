@@ -186,7 +186,13 @@ class MediaWikiSearchProvider:
 
     async def _api_get(self, params: dict[str, Any]) -> dict[str, Any]:
         validate_public_url(self.api_url)
-        headers = {"User-Agent": "DeepRhetor/0.1 (research; contact: local)"}
+        headers = {
+            "User-Agent": (
+                "DeepRhetor/0.1 "
+                "(https://github.com/willcipriano/DeepRhetor; research-bot@local) "
+                "python-httpx"
+            )
+        }
         if self._client is not None:
             response = await self._client.get(self.api_url, params=params, headers=headers)
             response.raise_for_status()

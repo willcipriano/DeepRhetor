@@ -215,6 +215,20 @@ class ResearchPlanRepository(BaseRepository):
             row = result.mappings().first()
         return _stored_from_row(row) if row else None
 
+    async def list_for_project(self, project_id: str) -> list[StoredResearchPlan]:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, project_id, run_id, version, status, rhetorical_posture, "
+                    "plan_json, created_at, approved_at "
+                    "FROM research_plan WHERE project_id = :project_id "
+                    "ORDER BY version ASC"
+                ),
+                {"project_id": project_id},
+            )
+            rows = result.mappings().all()
+        return [_stored_from_row(row) for row in rows]
+
     async def update_status(
         self,
         plan_id: str,

@@ -148,17 +148,18 @@ class WriterService:
             if not prose_parts:
                 if section.section_id.endswith("introduction") or section.title.lower() == "introduction":
                     prose = (
-                        f"This report addresses the research objective in outline "
-                        f"section {section.section_id}."
+                        f"This report investigates the following research objective: "
+                        f"{outline.title}."
                     )
                 elif section.section_id.endswith("conclusion") or section.title.lower() == "conclusion":
                     prose = (
-                        "The preceding sections summarize the approved evidence "
-                        "assembled for this project."
+                        "Taken together, the archived evidence above is offered in support "
+                        "of the research objective without inventing additional sources."
                     )
                 else:
                     prose = section.notes or f"Section {section.title}."
             else:
+                # Join evidence-bearing claims into continuous prose.
                 prose = " ".join(prose_parts)
             sections.append(
                 DraftSection(
