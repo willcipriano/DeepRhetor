@@ -1,0 +1,19 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message-version": "1.0.0",
+  "message": {
+    "DOI": "10.1234/example.rhetoric",
+    "URL": "https://doi.org/10.1234/example.rhetoric",
+    "title": ["Rhetoric and Evidence"],
+    "author": [
+      {"given": "Ada", "family": "Example"},
+      {"given": "Bob", "family": "Scholar"}
+    ],
+    "type": "journal-article",
+    "publisher": "Example Press",
+    "container-title": ["Journal of Rhetoric"],
+    "published-print": {"date-parts": [[2020, 4, 1]]},
+    "abstract": "A recorded Crossref fixture abstract on rhetoric."
+  }
+}

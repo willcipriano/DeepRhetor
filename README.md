@@ -4,9 +4,9 @@ DeepRhetor is a local research-and-writing application. Given a descriptive
 prompt, it plans research, discovers and archives sources, builds a grounded
 claim inventory with exact evidence, and produces a polished cited LaTeX report.
 
-**Status:** Stage 2 persistence complete (portable project SQLite, FTS,
-task ledger, recovery). See [PLAN.md](PLAN.md) for architecture and remaining
-build stages.
+**Status:** Stages 1–6 complete (through full source stack: Tavily, OpenAlex,
+Crossref, arXiv, Playwright fallback, OCR). See [PLAN.md](PLAN.md) for
+architecture and remaining build stages.
 
 ## Locked stack
 
@@ -44,7 +44,15 @@ deeprhetor version
 deeprhetor project create --path ./demo.deeprhetor --title Demo --prompt "Explain X"
 deeprhetor project backup --path ./demo.deeprhetor --dest ./demo-backup.deeprhetor
 pytest
+
+# Optional live Tavily (uses %APPDATA%/deeprhetor/config.toml or XDG config)
+DEEPRHETOR_LIVE_TAVILY=1 py -3.12 -m pytest -m live
 ```
+
+Optional extras for hard acquisition: `pip install -e ".[playwright]"` then
+`playwright install chromium`. OCR uses `pytesseract` (Python) plus a system
+Tesseract binary when scanned PDFs need it; missing binaries are skipped
+gracefully.
 
 Project files use a preferred `.deeprhetor` (or `.sqlite`) extension. Each file
 is one portable SQLite database with schema, corpus FTS, workflow state, and

@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "count": 2,
+    "db_response_time_ms": 12,
+    "page": 1,
+    "per_page": 5
+  },
+  "results": [
+    {
+      "id": "https://openalex.org/W2741809807",
+      "doi": "https://doi.org/10.1234/example.rhetoric",
+      "title": "Studies in Classical Rhetoric",
+      "display_name": "Studies in Classical Rhetoric",
+      "publication_year": 2019,
+      "publication_date": "2019-03-01",
+      "type": "article",
+      "cited_by_count": 42,
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "gold",
+        "oa_url": "https://example.com/oa/rhetoric.pdf"
+      },
+      "primary_location": {
+        "landing_page_url": "https://example.com/articles/rhetoric",
+        "pdf_url": "https://example.com/oa/rhetoric.pdf"
+      },
+      "abstract_inverted_index": {
+        "Classical": [0],
+        "rhetoric": [1],
+        "examines": [2],
+        "persuasion.": [3]
+      }
+    },
+    {
+      "id": "https://openalex.org/W1234567890",
+      "doi": "https://doi.org/10.5678/example.ethos",
+      "title": "Ethos and Pathos Revisited",
+      "display_name": "Ethos and Pathos Revisited",
+      "publication_year": 2021,
+      "publication_date": "2021-06-15",
+      "type": "article",
+      "cited_by_count": 11,
+      "open_access": {
+        "is_oa": false,
+        "oa_status": "closed",
+        "oa_url": null
+      },
+      "primary_location": {
+        "landing_page_url": "https://doi.org/10.5678/example.ethos",
+        "pdf_url": null
+      },
+      "abstract_inverted_index": {
+        "This": [0],
+        "paper": [1],
+        "revisits": [2],
+        "Aristotelian": [3],
+        "appeals.": [4]
+      }
+    }
+  ]
+}

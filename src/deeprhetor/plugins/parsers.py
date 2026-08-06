@@ -195,7 +195,11 @@ class HtmlParser:
 
 
 class PdfParser:
+    """PDF text extraction: pymupdf first, OCR fallback for scanned/image pages."""
+
     supported = frozenset({"application/pdf"})
+    # Pages below this character count are candidates for OCR.
+    ocr_char_threshold: int = 40
 
     def supports(self, media_type: str) -> bool:
         return media_type.split(";", 1)[0].strip().lower() in self.supported
@@ -205,28 +209,73 @@ class PdfParser:
 
         blocks: list[tuple[str, int | None, str | None]] = []
         title = document.title
+        warnings: list[str] = []
+        used_ocr = False
+        parser_name = "pymupdf"
+
         with fitz.open(stream=document.content, filetype="pdf") as pdf:
             meta = pdf.metadata or {}
             if not title:
                 title = meta.get("title") or document.filename
             for page_index, page in enumerate(pdf, start=1):
                 text = page.get_text("text").strip()
-                if not text:
+                if len(text) >= self.ocr_char_threshold:
+                    for para in re.split(r"\n\s*\n", text):
+                        cleaned = para.strip()
+                        if cleaned:
+                            blocks.append((cleaned, page_index, f"page/{page_index}"))
                     continue
-                for para in re.split(r"\n\s*\n", text):
-                    cleaned = para.strip()
-                    if cleaned:
-                        blocks.append((cleaned, page_index, f"page/{page_index}"))
+
+                ocr_text, ocr_warning = _ocr_page(page)
+                if ocr_warning:
+                    warnings.append(f"page/{page_index}: {ocr_warning}")
+                if ocr_text:
+                    used_ocr = True
+                    for para in re.split(r"\n\s*\n", ocr_text):
+                        cleaned = para.strip()
+                        if cleaned:
+                            blocks.append((cleaned, page_index, f"page/{page_index}"))
+                elif text:
+                    # Keep sparse native text if OCR unavailable / empty.
+                    blocks.append((text, page_index, f"page/{page_index}"))
+
+        if used_ocr:
+            parser_name = "pymupdf+ocr"
         full, segments = _segments_from_blocks(blocks)
+        source_meta = ParsedSourceMetadata(title=title)
+        if warnings:
+            source_meta.extra = {"extraction_warnings": warnings}
         return ParsedDocument(
             media_type="application/pdf",
             title=title,
             text=full,
             segments=segments,
-            parser="pymupdf",
+            parser=parser_name,
             parser_version=PARSER_VERSION,
-            source_metadata=ParsedSourceMetadata(title=title),
+            source_metadata=source_meta,
         )
+
+
+def _ocr_page(page: object) -> tuple[str, str | None]:
+    """Render a PDF page and OCR it. Gracefully skip if tesseract is missing."""
+    try:
+        import fitz  # pymupdf
+        import pytesseract
+        from PIL import Image
+    except ImportError as exc:
+        return "", f"ocr_skipped_import: {exc}"
+
+    try:
+        # pix map at moderate DPI for OCR
+        assert isinstance(page, fitz.Page)
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        text = pytesseract.image_to_string(image) or ""
+        return text.strip(), None
+    except pytesseract.TesseractNotFoundError:
+        return "", "ocr_skipped_tesseract_missing"
+    except Exception as exc:  # noqa: BLE001 — OCR is best-effort
+        return "", f"ocr_failed: {exc}"
 
 
 class DocxParser:

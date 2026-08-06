@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from deeprhetor.config.settings import AppConfig
 from deeprhetor.domain.sources import ProviderDescriptor
 from deeprhetor.plugins.protocols import SearchProvider
 
@@ -43,10 +44,26 @@ class SearchProviderRegistry:
         return len(self._providers)
 
 
-def create_default_registry() -> SearchProviderRegistry:
-    """Build a registry with MVP free-source adapters enabled."""
+def create_default_registry(config: AppConfig | None = None) -> SearchProviderRegistry:
+    """Build a registry with MVP source adapters enabled.
+
+    Crossref is registered for enrichment/metadata search but uses
+    ``source_classes=["bibliographic"]`` so the capability-aware dispatcher
+    does not treat it as a default scholarly worker assignment.
+    """
+    from deeprhetor.plugins.arxiv import ArxivSearchProvider
+    from deeprhetor.plugins.crossref import CrossrefEnricher
     from deeprhetor.plugins.mediawiki import MediaWikiSearchProvider
+    from deeprhetor.plugins.openalex import OpenAlexSearchProvider
+    from deeprhetor.plugins.tavily import TavilySearchProvider
 
     registry = SearchProviderRegistry()
     registry.register(MediaWikiSearchProvider())
+    registry.register(OpenAlexSearchProvider(config=config))
+    registry.register(ArxivSearchProvider(config=config))
+    registry.register(CrossrefEnricher(config=config))
+    api_key = None
+    if config is not None:
+        api_key = config.providers.tavily.api_key.get_secret_value() or None
+    registry.register(TavilySearchProvider(api_key=api_key, config=config))
     return registry

@@ -1,0 +1,24 @@
+{
+  "query": "rhetoric Aristotle",
+  "follow_up_questions": null,
+  "answer": null,
+  "images": [],
+  "results": [
+    {
+      "title": "Rhetoric (Aristotle)",
+      "url": "https://example.com/rhetoric-aristotle",
+      "content": "Aristotle's Rhetoric is an ancient Greek treatise on the art of persuasion.",
+      "score": 0.91,
+      "published_date": "2023-05-01T00:00:00Z",
+      "favicon": "https://example.com/favicon.ico"
+    },
+    {
+      "title": "Classical rhetoric overview",
+      "url": "https://example.org/classical-rhetoric",
+      "content": "Classical rhetoric covers invention, arrangement, style, memory, and delivery.",
+      "score": 0.77,
+      "published_date": "2022-11-15"
+    }
+  ],
+  "response_time": 0.42
+}
