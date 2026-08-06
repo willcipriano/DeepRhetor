@@ -27,6 +27,8 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "trafilatura>=1.12",
     "python-docx>=1.1",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +36,16 @@ dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
     "ruff>=0.5",
+]
+ocr = [
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0",
+]
+playwright = [
+    "playwright>=1.44",
+]
+sources = [
+    "deeprhetor[ocr,playwright]",
 ]
 
 [project.scripts]
@@ -46,6 +58,9 @@ where = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "live: tests that call live external APIs (deselect with '-m \"not live\"')",
+]
 
 [tool.ruff]
 line-length = 100

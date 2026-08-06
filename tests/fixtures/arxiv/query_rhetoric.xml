@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <title>ArXiv Query: search_query=all:rhetoric&amp;start=0&amp;max_results=2</title>
+  <id>http://arxiv.org/api/ABC</id>
+  <updated>2024-01-01T00:00:00-05:00</updated>
+  <entry>
+    <id>http://arxiv.org/abs/2401.00001v1</id>
+    <updated>2024-01-02T12:00:00Z</updated>
+    <published>2024-01-01T12:00:00Z</published>
+    <title>Computational Models of Classical Rhetoric</title>
+    <summary>We study classical rhetorical figures with computational methods.</summary>
+    <author>
+      <name>Casey Researcher</name>
+    </author>
+    <link href="https://arxiv.org/abs/2401.00001v1" rel="alternate" type="text/html"/>
+    <link title="pdf" href="https://arxiv.org/pdf/2401.00001v1" rel="related" type="application/pdf"/>
+    <arxiv:primary_category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2401.00002v1</id>
+    <updated>2024-01-03T12:00:00Z</updated>
+    <published>2024-01-02T12:00:00Z</published>
+    <title>Argument Mining and Persuasion</title>
+    <summary>An arXiv fixture paper on argument mining related to rhetoric.</summary>
+    <author>
+      <name>Dana Analyst</name>
+    </author>
+    <link href="https://arxiv.org/abs/2401.00002v1" rel="alternate" type="text/html"/>
+    <link title="pdf" href="https://arxiv.org/pdf/2401.00002v1" rel="related" type="application/pdf"/>
+    <arxiv:primary_category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+</feed>

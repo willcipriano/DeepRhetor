@@ -28,12 +28,12 @@ def build_supervisor_toolset() -> FunctionToolset[AgentDeps]:
                 for name in plugins
             ]
             or [
-                {"name": "mediawiki", "configured": False, "note": "Stage 3"},
-                {"name": "tavily", "configured": False, "note": "Stage 6"},
-                {"name": "openalex", "configured": False, "note": "Stage 6"},
-                {"name": "crossref", "configured": False, "note": "Stage 6"},
-                {"name": "arxiv", "configured": False, "note": "Stage 6"},
-                {"name": "local_files", "configured": False, "note": "Stage 3"},
+                {"name": "mediawiki", "configured": True, "source_classes": ["encyclopedia", "web"]},
+                {"name": "tavily", "configured": False, "source_classes": ["web", "general"], "note": "needs API key"},
+                {"name": "openalex", "configured": True, "source_classes": ["scholarly", "academic"]},
+                {"name": "crossref", "configured": True, "source_classes": ["bibliographic"], "note": "enrichment"},
+                {"name": "arxiv", "configured": True, "source_classes": ["preprint", "scholarly"]},
+                {"name": "local_files", "configured": True, "note": "import via LocalFileImporter"},
             ]
         }
 

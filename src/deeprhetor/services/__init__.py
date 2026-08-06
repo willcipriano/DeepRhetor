@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .acquisition import AcquisitionPipeline, AcquisitionResult
 from .checkpoint import CheckpointRecord, CheckpointStore
 from .fetch import (
     DEFAULT_MAX_BYTES,
@@ -42,6 +43,8 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "AcquisitionPipeline",
+    "AcquisitionResult",
     "CheckpointRecord",
     "CheckpointStore",
     "ClaimFtsHit",

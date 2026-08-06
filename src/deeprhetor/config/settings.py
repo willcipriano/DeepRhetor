@@ -37,6 +37,11 @@ class LimitsConfig(BaseModel):
     model_timeout_seconds: int = 300
     provider_concurrency: int = 4
     max_run_duration_seconds: int = 7_200
+    # Provider request rate limits (requests per minute). arXiv is intentionally strict.
+    tavily_rate_limit_per_minute: int = 30
+    openalex_rate_limit_per_minute: int = 100
+    crossref_rate_limit_per_minute: int = 50
+    arxiv_rate_limit_per_minute: int = 20  # ~1 request / 3s polite pool
 
 
 class AppConfig(BaseModel):

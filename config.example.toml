@@ -43,3 +43,8 @@ fetch_timeout_seconds = 60
 model_timeout_seconds = 300
 provider_concurrency = 4
 max_run_duration_seconds = 7_200
+tavily_rate_limit_per_minute = 30
+openalex_rate_limit_per_minute = 100
+crossref_rate_limit_per_minute = 50
+# arXiv polite pool ≈ 1 request / 3 seconds
+arxiv_rate_limit_per_minute = 20
