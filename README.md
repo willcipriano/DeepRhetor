@@ -1,38 +1,62 @@
 # DeepRhetor
 
-DeepRhetor turns a descriptive research prompt into a **citation-backed paper**. It plans subtopics, searches pluggable document sources, extracts grounded claims, keeps the research on track, and writes the final prose with a cost-aware model ladder.
+DeepRhetor is a local research-and-writing application. Given a descriptive
+prompt, it plans research, discovers and archives sources, builds a grounded
+claim inventory with exact evidence, and produces a polished cited LaTeX report.
 
-**Status: design only — not implemented yet.** See [PLAN.md](PLAN.md) for architecture and build stages.
+**Status:** Stage 1 foundation complete. See [PLAN.md](PLAN.md) for
+architecture and remaining build stages.
 
-## Cost ladder
+## Locked stack
 
-| Lane | Job | Model tier |
-|------|-----|------------|
-| Retrieve | Search, triage, and filter documents | Cheap |
-| Claim | Translate useful docs into lists of cited claims | Mid |
-| Write | Compose the actual paper from the claim inventory | Frontier |
+| Layer | Choice |
+|-------|--------|
+| Language | Python ≥ 3.11 |
+| Model calls | **Pydantic AI** (typed outputs, tools, usage) |
+| Orchestration | **LangGraph** as a thin workflow scheduler only |
+| Agents | No application-level LangChain agents or chat wrappers |
+| Persistence | One SQLite file per project |
+| UI (later) | FastAPI + Jinja + HTMX |
 
-## Pipeline sketch
+## Cost / capability ladder
 
-```mermaid
-flowchart TD
-  prompt[DescriptivePrompt] --> planner[Planner_mid]
-  planner --> topics[SubtopicFanout]
-  topics --> search[SearchPlugins_cheap]
-  search --> docs[DocumentCorpus]
-  docs --> claims[ClaimExtractor_mid]
-  claims --> track[KeepOnTrackCritic_mid]
-  track -->|gaps| topics
-  track -->|ok| outline[Outline_mid]
-  outline --> writer[PaperWriter_frontier]
-  writer --> paper[CitedPaper]
+| Role | Tier | Job |
+|------|------|-----|
+| Topic worker | Cheap | Search, triage, scan, propose claims |
+| Supervisor / verifier / critic | Mid | Plan, verify, judge coverage |
+| Writer | Frontier | Compose prose from approved claims only |
+
+## Quick start (foundation)
+
+```bash
+# Prefer Python 3.11+
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+
+# Copy and edit user config (credentials stay outside the repo)
+# Linux/macOS: ~/.config/deeprhetor/config.toml
+# Windows:     %APPDATA%\deeprhetor\config.toml
+cp config.example.toml path/to/your/config.toml
+
+deeprhetor version
+pytest
 ```
 
-## Planned stack
+## Package layout
 
-- **Python** with **LangChain** / **LangGraph** for orchestration
-- **Pluggable search providers** — bring your own APIs (web, academic, local files); no hard-coded single vendor at the core
-- **Provider-agnostic chat models** for cheap / mid / frontier lanes
+```
+src/deeprhetor/
+  config/         User config loader + redaction
+  domain/         Versioned Pydantic models
+  db/             Async SQLite engine helpers
+  repositories/   Typed repository stubs
+  plugins/        Search/source plugins (Stage 3+)
+  models/         Model registry / agents (Stage 4+)
+  workflow/       LangGraph scheduler (Stage 5+)
+  services/       Deterministic application services
+  web/            FastAPI UI (Stage 9+)
+```
 
 ## License
 
