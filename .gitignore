@@ -1,4 +1,4 @@
-# Python (future package)
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -10,6 +10,10 @@ venv/
 .ruff_cache/
 dist/
 build/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # OS / editor
 .DS_Store
