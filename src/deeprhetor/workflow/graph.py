@@ -7,7 +7,7 @@ from typing import Any, Literal
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from deeprhetor.domain.enums import PlanStatus, RunStatus, TaskStatus
+from deeprhetor.domain.enums import ClaimStatus, PlanStatus, RunStatus, TaskStatus
 from deeprhetor.domain.planning import ResearchPlan
 from deeprhetor.repositories.base import utcnow
 from deeprhetor.workflow.checkpointer import ProjectSqliteSaver
@@ -251,6 +251,7 @@ def build_workflow_graph(ctx: WorkflowContext) -> Any:
             )
 
         task_ids: list[str] = []
+        critic_pass = int(state.get("critic_pass") or 0)
         for assignment in assignments:
             key = assignment_idempotency_key(
                 run_id=run_id,
@@ -258,6 +259,9 @@ def build_workflow_graph(ctx: WorkflowContext) -> Any:
                 topic_id=assignment.topic_id,
                 provider=assignment.provider_or_class,
             )
+            # Distinct keys per critic pass so gap re-dispatch is resumable but not a no-op.
+            if critic_pass:
+                key = f"{key}:critic{critic_pass}"
             task = await ctx.tasks.create(
                 run_id=run_id,
                 kind="topic_worker",
@@ -337,26 +341,200 @@ def build_workflow_graph(ctx: WorkflowContext) -> Any:
                 "stage": "joined",
             },
         )
-        # Stage 5 ends after join — not full knowledge/publication.
-        await ctx.runs.update_status(run_id, RunStatus.COMPLETED)
         await ctx.checkpoints.put(
             run_id=run_id,
             node_name="join_and_progress",
             payload={
-                "stage": "completed",
+                "stage": "joined",
                 "completed": completed,
                 "total": len(worker_tasks),
             },
             namespace="nodes",
         )
+        return {"stage": "joined"}
+
+    async def scan_documents(state: WorkflowState) -> dict[str, Any]:
+        run_id = state["run_id"]
+        docs = await ctx.documents.list_for_project(state["project_id"])
+        document_ids: list[str] = []
+        for doc in docs:
+            version = await ctx.documents.latest_version(doc.id)
+            if version is None:
+                continue
+            document_ids.append(doc.id)
+            await ctx.scan_service.scan_until_complete(
+                document_id=doc.id,
+                document_version_id=version.id,
+            )
         await _emit(
             ctx,
             run_id=run_id,
-            kind="workflow.completed",
-            message="Stage 5 workflow completed (plan → approve → fan-out → join)",
-            payload={"stage": "completed"},
+            kind="workflow.scan",
+            message=f"Scanned {len(document_ids)} documents",
+            payload={"document_ids": document_ids},
         )
-        return {"stage": "completed"}
+        await ctx.checkpoints.put(
+            run_id=run_id,
+            node_name="scan_documents",
+            payload={"stage": "scanning", "document_ids": document_ids},
+            namespace="nodes",
+        )
+        return {"stage": "scanning", "document_ids": document_ids}
+
+    async def propose_claims(state: WorkflowState) -> dict[str, Any]:
+        run_id = state["run_id"]
+        plan_id = state.get("plan_id")
+        if not plan_id:
+            raise ValueError("plan_id required before propose_claims")
+        stored = await ctx.plans.get(plan_id)
+        if stored is None:
+            raise ValueError(f"plan not found: {plan_id}")
+        claim_ids = await ctx.proposer.propose_for_plan(
+            project_id=state["project_id"],
+            run_id=run_id,
+            plan=stored.plan,
+            documents=ctx.documents,
+            claims=ctx.claims,
+            evidence=ctx.evidence,
+        )
+        await _emit(
+            ctx,
+            run_id=run_id,
+            kind="workflow.propose",
+            message=f"Proposed {len(claim_ids)} claims",
+            payload={"claim_ids": claim_ids},
+        )
+        await ctx.checkpoints.put(
+            run_id=run_id,
+            node_name="propose_claims",
+            payload={"stage": "proposing", "claim_ids": claim_ids},
+            namespace="nodes",
+        )
+        return {"stage": "proposing", "claim_ids": claim_ids}
+
+    async def verify_claims(state: WorkflowState) -> dict[str, Any]:
+        run_id = state["run_id"]
+        proposed = await ctx.claims.list_for_project(
+            state["project_id"], status=ClaimStatus.PROPOSED, run_id=run_id
+        )
+        decisions: list[str] = []
+        for row in proposed:
+            decision = await ctx.verifier.verify_claim(row.id)
+            decisions.append(str(decision.decision))
+        await _emit(
+            ctx,
+            run_id=run_id,
+            kind="workflow.verify",
+            message=f"Verified {len(proposed)} proposed claims",
+            payload={"count": len(proposed), "decisions": decisions},
+        )
+        await ctx.checkpoints.put(
+            run_id=run_id,
+            node_name="verify_claims",
+            payload={"stage": "verifying", "count": len(proposed)},
+            namespace="nodes",
+        )
+        return {"stage": "verifying"}
+
+    async def coverage_critic(state: WorkflowState) -> dict[str, Any]:
+        run_id = state["run_id"]
+        plan_id = state.get("plan_id")
+        if not plan_id:
+            raise ValueError("plan_id required before coverage_critic")
+        stored = await ctx.plans.get(plan_id)
+        if stored is None:
+            raise ValueError(f"plan not found: {plan_id}")
+
+        result = await ctx.critic.judge(
+            plan=stored.plan,
+            project_id=state["project_id"],
+            plan_id=plan_id,
+            run_id=run_id,
+            state=ctx.critic_loop,
+            critic_service=ctx.critic_service,
+        )
+        ctx.critic_loop = result.state
+        gap_ids = [g.gap_id for g in result.report.gaps]
+        research_complete = result.state.is_complete or not result.should_continue
+
+        await _emit(
+            ctx,
+            run_id=run_id,
+            kind="workflow.critic",
+            message=(
+                "Coverage complete"
+                if research_complete and result.state.is_complete
+                else f"Coverage gaps: {len(gap_ids)} (pass {result.state.pass_count})"
+            ),
+            payload={
+                "pass_count": result.state.pass_count,
+                "is_complete": result.state.is_complete,
+                "should_continue": result.should_continue,
+                "terminated_reason": result.state.terminated_reason,
+                "gap_request_ids": gap_ids,
+            },
+        )
+
+        if research_complete:
+            await ctx.runs.update_status(run_id, RunStatus.COMPLETED)
+            await ctx.checkpoints.put(
+                run_id=run_id,
+                node_name="coverage_critic",
+                payload={
+                    "stage": "completed",
+                    "pass_count": result.state.pass_count,
+                    "terminated_reason": result.state.terminated_reason,
+                },
+                namespace="nodes",
+            )
+            await _emit(
+                ctx,
+                run_id=run_id,
+                kind="workflow.completed",
+                message="Knowledge loop completed (scan → verify → critic gate)",
+                payload={
+                    "stage": "completed",
+                    "terminated_reason": result.state.terminated_reason,
+                },
+            )
+            return {
+                "stage": "completed",
+                "critic_pass": result.state.pass_count,
+                "research_complete": True,
+                "gap_request_ids": gap_ids,
+            }
+
+        # Gaps → supervisor path: emit gap requests and re-dispatch (critic never fans out).
+        await _emit(
+            ctx,
+            run_id=run_id,
+            kind="workflow.gap_requests",
+            message=f"Critic emitted {len(gap_ids)} gap requests for supervisor",
+            payload={"gap_request_ids": gap_ids, "gaps": [g.model_dump(mode="json") for g in result.report.gaps]},
+        )
+        await ctx.checkpoints.put(
+            run_id=run_id,
+            node_name="coverage_critic",
+            payload={
+                "stage": "criticizing",
+                "pass_count": result.state.pass_count,
+                "gap_request_ids": gap_ids,
+            },
+            namespace="nodes",
+        )
+        return {
+            "stage": "criticizing",
+            "critic_pass": result.state.pass_count,
+            "research_complete": False,
+            "gap_request_ids": gap_ids,
+        }
+
+    def route_after_critic(
+        state: WorkflowState,
+    ) -> Literal["dispatch_workers", "__end__"]:
+        if state.get("research_complete"):
+            return "__end__"
+        return "dispatch_workers"
 
     graph = StateGraph(WorkflowState)
     graph.add_node("create_project", create_project)
@@ -365,6 +543,10 @@ def build_workflow_graph(ctx: WorkflowContext) -> Any:
     graph.add_node("dispatch_workers", dispatch_workers)
     graph.add_node("topic_worker_fanout", topic_worker_fanout)
     graph.add_node("join_and_progress", join_and_progress)
+    graph.add_node("scan_documents", scan_documents)
+    graph.add_node("propose_claims", propose_claims)
+    graph.add_node("verify_claims", verify_claims)
+    graph.add_node("coverage_critic", coverage_critic)
 
     graph.add_edge(START, "create_project")
     graph.add_edge("create_project", "supervisor_plan")
@@ -379,7 +561,18 @@ def build_workflow_graph(ctx: WorkflowContext) -> Any:
     )
     graph.add_edge("dispatch_workers", "topic_worker_fanout")
     graph.add_edge("topic_worker_fanout", "join_and_progress")
-    graph.add_edge("join_and_progress", END)
+    graph.add_edge("join_and_progress", "scan_documents")
+    graph.add_edge("scan_documents", "propose_claims")
+    graph.add_edge("propose_claims", "verify_claims")
+    graph.add_edge("verify_claims", "coverage_critic")
+    graph.add_conditional_edges(
+        "coverage_critic",
+        route_after_critic,
+        {
+            "dispatch_workers": "dispatch_workers",
+            "__end__": END,
+        },
+    )
 
     return graph
 

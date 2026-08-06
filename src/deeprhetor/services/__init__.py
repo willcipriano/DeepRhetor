@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from .acquisition import AcquisitionPipeline, AcquisitionResult
 from .checkpoint import CheckpointRecord, CheckpointStore
+from .critic import CoverageCriticService, CriticLoopState, CriticPassResult
 from .fetch import (
     DEFAULT_MAX_BYTES,
     DEFAULT_USER_AGENT,
@@ -28,6 +29,8 @@ from .project_store import (
     open_project_async,
 )
 from .recovery import RecoveryReport, RecoveryService, mark_orphaned_in_progress
+from .scan import BatchScanResult, ScanService
+from .verify import QuoteCheckResult, VerifierService
 
 if TYPE_CHECKING:
     from .mediawiki_import import MediaWikiImporter as MediaWikiImporter
@@ -45,9 +48,13 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "AcquisitionPipeline",
     "AcquisitionResult",
+    "BatchScanResult",
     "CheckpointRecord",
     "CheckpointStore",
     "ClaimFtsHit",
+    "CoverageCriticService",
+    "CriticLoopState",
+    "CriticPassResult",
     "DEFAULT_EXTENSION",
     "DEFAULT_MAX_BYTES",
     "DEFAULT_USER_AGENT",
@@ -58,10 +65,13 @@ __all__ = [
     "MediaWikiImporter",
     "OpenProject",
     "PREFERRED_EXTENSIONS",
+    "QuoteCheckResult",
     "RecoveryReport",
     "RecoveryService",
     "SSRFBlockedError",
+    "ScanService",
     "SecureHttpFetcher",
+    "VerifierService",
     "backup_project",
     "create_project",
     "create_project_async",

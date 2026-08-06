@@ -4,8 +4,8 @@ DeepRhetor is a local research-and-writing application. Given a descriptive
 prompt, it plans research, discovers and archives sources, builds a grounded
 claim inventory with exact evidence, and produces a polished cited LaTeX report.
 
-**Status:** Stages 1–6 complete (through full source stack: Tavily, OpenAlex,
-Crossref, arXiv, Playwright fallback, OCR). See [PLAN.md](PLAN.md) for
+**Status:** Stages 1–7 complete (through knowledge inventory, evidence
+verification, and coverage critic loop). See [PLAN.md](PLAN.md) for
 architecture and remaining build stages.
 
 ## Locked stack

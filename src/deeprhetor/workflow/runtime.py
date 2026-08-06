@@ -55,14 +55,20 @@ async def open_workflow(
     configuration_snapshot_id: str | None = None,
     supervisor: SupervisorAgent | None = None,
     worker: TopicWorkerAgent | None = None,
+    critic: Any | None = None,
+    proposer: Any | None = None,
     providers: SearchProviderRegistry | None = None,
+    limits: Any | None = None,
 ) -> WorkflowHandle:
     """Create or resume a run-bound compiled workflow."""
     ctx = WorkflowContext.from_engine(
         engine,
         supervisor=supervisor,
         worker=worker,
+        critic=critic,
+        proposer=proposer,
         providers=providers,
+        limits=limits,
         configuration_snapshot_id=configuration_snapshot_id,
     )
     if run_id:

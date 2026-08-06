@@ -4,9 +4,9 @@
 > persistence, tools, and build stages. Decisions recorded here should not need
 > to be rediscovered from chat history.
 >
-> Stage 0 is the design captured in this file. Stages 1–6 (foundation,
+> Stage 0 is the design captured in this file. Stages 1–7 (foundation,
 > persistence/recovery, source vertical slice, model layer, thin LangGraph
-> workflow, and full source stack) are complete.
+> workflow, full source stack, and knowledge/critic loop) are complete.
 
 ## Vision
 
@@ -795,7 +795,7 @@ The MVP is successful when a user can:
 | 4 | Pydantic AI model registry, OpenRouter adapter, role presets, and typed agents | **Complete** |
 | 5 | Thin LangGraph workflow with plan approval, worker fan-out, checkpoints, and replay safety | **Complete** |
 | 6 | Tavily, OpenAlex, Crossref, arXiv, secure fetch, headless browser, and OCR | **Complete** |
-| 7 | Full-scan accounting, claims, evidence verification, critic loop, and completion gate | Pending |
+| 7 | Full-scan accounting, claims, evidence verification, critic loop, and completion gate | **Complete** |
 | 8 | Frontier writer, citation validator, LaTeX renderer, PDF, bibliography, and manifest | Pending |
 | 9 | FastAPI/Jinja/HTMX product UI and interrupted-run recovery experience | Pending |
 | 10 | Hardening, automated integrity tests, manual report evaluation, and MVP release | Pending |
