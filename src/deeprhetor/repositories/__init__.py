@@ -16,6 +16,7 @@ from .operations import (
     UsageRecord,
     UsageRecordRepository,
 )
+from .planning import ResearchPlanRepository, StoredResearchPlan
 from .project import ConfigurationSnapshot, Project, ProjectRepository
 from .workflow import Run, RunRepository, Task, TaskRepository
 
@@ -36,8 +37,10 @@ __all__ = [
     "ModelCallRepository",
     "Project",
     "ProjectRepository",
+    "ResearchPlanRepository",
     "Run",
     "RunRepository",
+    "StoredResearchPlan",
     "Task",
     "TaskRepository",
     "UsageRecord",

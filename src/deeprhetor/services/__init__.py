@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from .checkpoint import CheckpointRecord, CheckpointStore
 from .fetch import (
     DEFAULT_MAX_BYTES,
@@ -13,7 +15,6 @@ from .fetch import (
 )
 from .fts import ClaimFtsHit, DocumentFtsHit, FtsService
 from .local_import import LocalFileImporter
-from .mediawiki_import import MediaWikiImporter
 from .project_store import (
     DEFAULT_EXTENSION,
     PREFERRED_EXTENSIONS,
@@ -26,6 +27,19 @@ from .project_store import (
     open_project_async,
 )
 from .recovery import RecoveryReport, RecoveryService, mark_orphaned_in_progress
+
+if TYPE_CHECKING:
+    from .mediawiki_import import MediaWikiImporter as MediaWikiImporter
+
+
+def __getattr__(name: str) -> Any:
+    # Lazy: mediawiki_import imports plugins.mediawiki, which imports services.fetch.
+    if name == "MediaWikiImporter":
+        from .mediawiki_import import MediaWikiImporter as _MediaWikiImporter
+
+        return _MediaWikiImporter
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "CheckpointRecord",

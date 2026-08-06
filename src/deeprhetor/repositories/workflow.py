@@ -122,9 +122,13 @@ class RunRepository(BaseRepository):
         *,
         started_at: datetime | None = None,
         finished_at: datetime | None = None,
+        plan_version: int | None = None,
     ) -> Run | None:
         fields = ["status = :status"]
         params: dict[str, Any] = {"id": run_id, "status": str(status)}
+        if plan_version is not None:
+            fields.append("plan_version = :plan_version")
+            params["plan_version"] = plan_version
         if started_at is not None:
             fields.append("started_at = :started_at")
             params["started_at"] = started_at.replace(microsecond=0).isoformat()
@@ -138,6 +142,14 @@ class RunRepository(BaseRepository):
             await conn.execute(
                 text(f"UPDATE run SET {', '.join(fields)} WHERE id = :id"),
                 params,
+            )
+        return await self.get(run_id)
+
+    async def update_plan_version(self, run_id: str, plan_version: int) -> Run | None:
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                text("UPDATE run SET plan_version = :plan_version WHERE id = :id"),
+                {"id": run_id, "plan_version": plan_version},
             )
         return await self.get(run_id)
 

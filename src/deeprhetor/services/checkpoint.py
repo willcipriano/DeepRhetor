@@ -15,9 +15,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from deeprhetor.repositories.base import dumps_json, iso_now, loads_json, parse_dt, utcnow
+from deeprhetor.repositories.base import dumps_json, loads_json, parse_dt, utcnow
 
 DEFAULT_NAMESPACE_PREFIX = "lg:"
+
+
+def _checkpoint_iso_now() -> str:
+    # Keep sub-second precision so rapid successive puts order correctly.
+    return utcnow().isoformat()
 
 
 class CheckpointRecord(BaseModel):
@@ -71,7 +76,7 @@ class CheckpointStore:
                     "node_name": node_name,
                     "checkpoint_ns": ns,
                     "payload_json": dumps_json(payload),
-                    "created_at": iso_now(),
+                    "created_at": _checkpoint_iso_now(),
                 },
             )
         return CheckpointRecord(
@@ -95,7 +100,7 @@ class CheckpointStore:
         sql = (
             "SELECT id, run_id, node_name, checkpoint_ns, payload_json, created_at "
             f"FROM checkpoint WHERE {' AND '.join(clauses)} "
-            "ORDER BY created_at DESC LIMIT 1"
+            "ORDER BY created_at DESC, rowid DESC LIMIT 1"
         )
         async with self._engine.connect() as conn:
             result = await conn.execute(text(sql), params)
