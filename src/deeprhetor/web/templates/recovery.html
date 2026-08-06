@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Recovery — {{ project.title }}{% endblock %}
+{% block content %}
+<h1>Interrupted-run recovery</h1>
+<p class="muted">Closing the browser does not stop work. If the process itself stops, orphaned runs are marked interrupted on open.</p>
+
+{% if recovery and recovery.had_orphans %}
+<div class="flash">
+  On open: marked {{ recovery.interrupted_run_ids|length }} run(s) and
+  {{ recovery.interrupted_task_ids|length }} task(s) as interrupted.
+</div>
+{% endif %}
+
+{% if interrupted_runs %}
+{% for run in interrupted_runs %}
+<section class="panel" style="margin-bottom:1rem">
+  <h2>Run <code>{{ run.id }}</code> · <span class="status">{{ run.status }}</span></h2>
+  <div class="actions">
+    <form method="post" action="/projects/{{ project_key }}/recovery/{{ run.id }}/resume" style="display:inline">
+      <button type="submit">Resume run</button>
+    </form>
+    <form method="post" action="/projects/{{ project_key }}/recovery/{{ run.id }}/abandon" style="display:inline">
+      <button type="submit" class="danger">Abandon run</button>
+    </form>
+    <a class="btn secondary" href="/projects/{{ project_key }}/runs/{{ run.id }}">Inspect</a>
+  </div>
+  {% set tasks = tasks_by_run.get(run.id, []) %}
+  {% if tasks %}
+  <h3>Interrupted / failed tasks</h3>
+  <table>
+    <thead><tr><th>Kind</th><th>Status</th><th>Attempt</th><th></th></tr></thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr>
+        <td>{{ t.kind }}</td>
+        <td><span class="status">{{ t.status }}</span></td>
+        <td>{{ t.attempt }}</td>
+        <td>
+          <form method="post" action="/projects/{{ project_key }}/recovery/tasks/{{ t.id }}/retry">
+            <button type="submit" class="secondary">Retry task</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<section class="panel">
+  <p class="muted">No interrupted or failed runs.</p>
+</section>
+{% endif %}
+{% endblock %}

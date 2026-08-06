@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Draft — {{ project.title }}{% endblock %}
+{% block content %}
+<h1>Draft &amp; validation</h1>
+
+{% if outline %}
+<section class="panel">
+  <h2>Outline: {{ outline.title }}</h2>
+  <ol>
+    {% for section in outline.outline.sections %}
+    <li>{{ section.title }}
+      {% if section.claim_ids %}<span class="muted">({{ section.claim_ids|length }} claims)</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% else %}
+<p class="muted">No outline yet.</p>
+{% endif %}
+
+{% if draft %}
+<section class="panel" style="margin-top:1rem">
+  <h2>Draft: {{ draft.title }} · <span class="status">{{ draft.status }}</span></h2>
+  {% for section in draft.draft.sections %}
+  <article>
+    <h3>{{ section.title }}</h3>
+    <pre class="prose">{{ section.prose }}</pre>
+  </article>
+  {% endfor %}
+</section>
+{% else %}
+<p class="muted">No draft yet.</p>
+{% endif %}
+
+{% if validation %}
+<section class="panel" style="margin-top:1rem">
+  <h2>Citation validation · <span class="status">{{ validation.outcome }}</span></h2>
+  {% if validation.issues %}
+  <ul>
+    {% for issue in validation.issues %}
+    <li><strong>{{ issue.code }}</strong>: {{ issue.message }}
+      {% if issue.path %}<span class="muted">({{ issue.path }})</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No issues recorded.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

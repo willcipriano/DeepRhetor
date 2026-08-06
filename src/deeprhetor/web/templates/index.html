@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Projects — DeepRhetor{% endblock %}
+{% block content %}
+<h1>Projects</h1>
+<p class="muted">Local portable <code>.deeprhetor</code> project files. One active research run at a time.</p>
+
+{% if active_run_id %}
+<div class="flash">Active run: <code>{{ active_run_id }}</code></div>
+{% endif %}
+
+<div class="grid two">
+  <section class="panel">
+    <h2>Create project</h2>
+    <form method="post" action="/projects">
+      <label for="title">Title</label>
+      <input id="title" name="title" type="text" required>
+      <label for="prompt">Research prompt</label>
+      <textarea id="prompt" name="prompt" required></textarea>
+      <div class="actions">
+        <button type="submit">Create</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Open existing file</h2>
+    <form method="post" action="/projects/open">
+      <label for="path">Absolute path to <code>.deeprhetor</code> / <code>.sqlite</code></label>
+      <input id="path" name="path" type="text" required placeholder="C:\path\to\project.deeprhetor">
+      <div class="actions">
+        <button type="submit" class="secondary">Open</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<h2>Saved projects</h2>
+{% if projects %}
+<table>
+  <thead>
+    <tr><th>Title</th><th>Prompt</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for p in projects %}
+    <tr>
+      <td>{{ p.title }}</td>
+      <td class="muted">{{ p.prompt[:120] }}{% if p.prompt|length > 120 %}…{% endif %}</td>
+      <td><a href="/projects/{{ p.key }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No projects yet.</p>
+{% endif %}
+{% endblock %}
