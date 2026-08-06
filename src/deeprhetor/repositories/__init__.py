@@ -32,12 +32,21 @@ from .scan import (
     SegmentScanRecord,
 )
 from .workflow import Run, RunRepository, Task, TaskRepository
+from .writing import (
+    CitationKeyRepository,
+    DraftRepository,
+    OutlineRepository,
+    StoredDraft,
+    StoredOutline,
+    ValidationResultRepository,
+)
 
 __all__ = [
     "CLAIM_TRANSITIONS",
     "Artifact",
     "ArtifactRepository",
     "BaseRepository",
+    "CitationKeyRepository",
     "ClaimRepository",
     "ClaimTransitionError",
     "ConfigurationSnapshot",
@@ -46,6 +55,7 @@ __all__ = [
     "DocumentScanRecord",
     "DocumentSegment",
     "DocumentVersion",
+    "DraftRepository",
     "ErrorRecord",
     "ErrorRepository",
     "Event",
@@ -53,6 +63,7 @@ __all__ = [
     "EvidenceRepository",
     "ModelCall",
     "ModelCallRepository",
+    "OutlineRepository",
     "Project",
     "ProjectRepository",
     "ResearchPlanRepository",
@@ -61,10 +72,13 @@ __all__ = [
     "ScanRepository",
     "SegmentScanRecord",
     "StoredClaim",
+    "StoredDraft",
+    "StoredOutline",
     "StoredResearchPlan",
     "TERMINAL_SCAN_STATUSES",
     "Task",
     "TaskRepository",
     "UsageRecord",
     "UsageRecordRepository",
+    "ValidationResultRepository",
 ]

@@ -1,0 +1,24 @@
+{% for entry in entries -%}
+@{{ entry.entry_type }}{ {{- entry.key -}},
+  title = { {{- entry.title -}} },
+{% if entry.author %}  author = { {{- entry.author -}} },
+{% endif -%}
+{% if entry.year %}  year = { {{- entry.year -}} },
+{% endif -%}
+{% if entry.url %}  url = { {{- entry.url -}} },
+{% endif -%}
+{% if entry.doi %}  doi = { {{- entry.doi -}} },
+{% endif -%}
+{% if entry.publisher %}  publisher = { {{- entry.publisher -}} },
+{% endif -%}
+{% if entry.howpublished %}  howpublished = { {{- entry.howpublished -}} },
+{% endif -%}
+{% if entry.urldate %}  urldate = { {{- entry.urldate -}} },
+{% endif -%}
+{% if entry.note %}  note = { {{- entry.note -}} },
+{% endif -%}
+{% for k, v in entry.extra.items() %}  {{ k }} = { {{- v -}} },
+{% endfor -%}
+}
+
+{% endfor %}

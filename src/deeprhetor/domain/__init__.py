@@ -36,7 +36,12 @@ from .planning import (
     WorkerAssignment,
 )
 from .discovery import SearchHit, SearchRequest, SearchResponse
-from .publication import PublicationResult, ValidationIssue, ValidationResult
+from .publication import (
+    ProvenanceManifest,
+    PublicationResult,
+    ValidationIssue,
+    ValidationResult,
+)
 from .sources import (
     FetchRequest,
     FetchResult,
@@ -45,12 +50,21 @@ from .sources import (
     ProviderDescriptor,
     RawDocument,
 )
-from .writing import DraftSection, Outline, OutlineSection, StructuredDraft
+from .writing import (
+    BibEntry,
+    CitationKey,
+    DraftSection,
+    Outline,
+    OutlineSection,
+    StructuredDraft,
+)
 
 SCHEMA_VERSION = 1
 
 __all__ = [
     "SCHEMA_VERSION",
+    "BibEntry",
+    "CitationKey",
     "ClaimEvidenceLink",
     "ClaimRelation",
     "ClaimStatus",
@@ -72,6 +86,7 @@ __all__ = [
     "PlanStatus",
     "ProposedClaim",
     "ProviderDescriptor",
+    "ProvenanceManifest",
     "PublicationResult",
     "PublicationStatus",
     "RawDocument",
