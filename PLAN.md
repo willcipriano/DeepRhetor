@@ -791,7 +791,7 @@ The MVP is successful when a user can:
 | 1 | Python package, configuration, Pydantic domain models, migrations, repositories | **Complete** |
 | 2 | Portable SQLite projects, FTS5 corpus, task ledger, artifacts, and recovery | **Complete** |
 | 3 | Provider/fetch/parser contracts plus local files and MediaWiki vertical slice | **Complete** |
-| 4 | Pydantic AI model registry, OpenRouter adapter, role presets, and typed agents | Pending |
+| 4 | Pydantic AI model registry, OpenRouter adapter, role presets, and typed agents | **Complete** |
 | 5 | Thin LangGraph workflow with plan approval, worker fan-out, checkpoints, and replay safety | Pending |
 | 6 | Tavily, OpenAlex, Crossref, arXiv, secure fetch, headless browser, and OCR | Pending |
 | 7 | Full-scan accounting, claims, evidence verification, critic loop, and completion gate | Pending |

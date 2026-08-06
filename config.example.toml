@@ -13,6 +13,9 @@ base_url = "https://openrouter.ai/api/v1"
 [providers.tavily]
 api_key = "YOUR_TAVILY_API_KEY"
 
+# Editable cheap/mid/frontier presets. Aliases resolve to exact OpenRouter
+# model IDs and freeze into configuration_snapshot at run start — mid-run
+# substitution is not allowed.
 [models.presets.cheap]
 provider = "openrouter"
 model = "openai/gpt-4o-mini"
@@ -25,7 +28,7 @@ temperature = 0.2
 
 [models.presets.frontier]
 provider = "openrouter"
-model = "anthropic/claude-sonnet-4"
+model = "anthropic/claude-opus-4"
 temperature = 0.4
 
 [limits]

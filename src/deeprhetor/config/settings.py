@@ -47,7 +47,7 @@ class AppConfig(BaseModel):
         default_factory=lambda: {
             "cheap": ModelPreset(model="openai/gpt-4o-mini"),
             "mid": ModelPreset(model="openai/gpt-4o"),
-            "frontier": ModelPreset(model="anthropic/claude-sonnet-4", temperature=0.4),
+            "frontier": ModelPreset(model="anthropic/claude-opus-4", temperature=0.4),
         }
     )
     limits: LimitsConfig = Field(default_factory=LimitsConfig)
