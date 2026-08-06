@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Plan — {{ project.title }}{% endblock %}
+{% block content %}
+<h1>Research plan</h1>
+{% if run %}
+<p class="muted">Run <code>{{ run.id }}</code> · <span class="status">{{ run.status }}</span>
+  · <a href="/projects/{{ project_key }}/runs/{{ run.id }}">Live view</a>
+</p>
+{% else %}
+<p class="muted">No runs yet. Start one from the project page.</p>
+{% endif %}
+
+{% if plan %}
+<section class="panel">
+  <h2>Version {{ plan.version }} · <span class="status">{{ plan.status }}</span></h2>
+  {% if plan.rhetorical_posture %}
+  <p class="muted">Posture: {{ plan.rhetorical_posture }}</p>
+  {% endif %}
+  <p class="muted">Prompt: {{ plan.plan.prompt[:240] }}{% if plan.plan.prompt|length > 240 %}…{% endif %}</p>
+
+  <h2>Topics</h2>
+  <table>
+    <thead><tr><th>Topic</th><th>Objective</th><th>Sources</th></tr></thead>
+    <tbody>
+      {% for t in plan.plan.topics %}
+      <tr>
+        <td>{{ t.title }}</td>
+        <td>{{ t.objective }}</td>
+        <td class="muted">{{ t.desired_source_classes | join(", ") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if plan.plan.sections %}
+  <h2>Outline sections</h2>
+  <ul>
+    {% for s in plan.plan.sections %}
+    <li>{{ s.title }}{% if s.questions %} — <span class="muted">{{ s.questions | join("; ") }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+{% if run and run.status.value in ['awaiting_plan_approval', 'created', 'running'] %}
+<section class="panel" style="margin-top:1rem">
+  <h2>Approve or request changes</h2>
+  <form method="post" action="/projects/{{ project_key }}/plan/approve">
+    <input type="hidden" name="run_id" value="{{ run.id }}">
+    <label for="feedback">Feedback (required when requesting changes)</label>
+    <textarea id="feedback" name="feedback" placeholder="What should change in the plan?"></textarea>
+    <div class="actions">
+      <button type="submit" name="action" value="approve">Approve plan</button>
+      <button type="submit" name="action" value="feedback" class="secondary">Send feedback</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+{% else %}
+<section class="panel">
+  <p class="muted">No plan generated yet. Start a research run; planning runs in the background and this page will show the result.</p>
+  {% if run %}
+  <p><a href="/projects/{{ project_key }}/runs/{{ run.id }}">Watch live run</a>
+     · This page auto-refreshes while awaiting a plan.</p>
+  <meta http-equiv="refresh" content="2">
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

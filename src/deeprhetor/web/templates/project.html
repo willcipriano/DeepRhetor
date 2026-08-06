@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} — DeepRhetor{% endblock %}
+{% block content %}
+<h1>{{ project.title }}</h1>
+<p class="muted">File: <code>{{ path }}</code></p>
+
+{% if interrupted_runs %}
+<div class="flash">
+  Interrupted/failed runs need attention.
+  <a href="/projects/{{ project_key }}/recovery">Open recovery</a>
+</div>
+{% endif %}
+
+<form method="post" action="/projects/{{ project_key }}/settings">
+  <div class="grid two">
+    <section class="panel">
+      <h2>Prompt</h2>
+      <label for="title">Title</label>
+      <input id="title" name="title" type="text" value="{{ project.title }}" required>
+      <label for="prompt">Authoritative research prompt</label>
+      <textarea id="prompt" name="prompt" required>{{ project.prompt }}</textarea>
+    </section>
+
+    <section class="panel">
+      <h2>Model preset &amp; limits</h2>
+      <label for="model_preset">Model preset</label>
+      <select id="model_preset" name="model_preset">
+        {% for name in model_presets %}
+        <option value="{{ name }}" {% if name == model_preset %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      <label for="max_search_results_per_assignment">Max search results / assignment</label>
+      <input id="max_search_results_per_assignment" name="max_search_results_per_assignment" type="number"
+             value="{{ limits.max_search_results_per_assignment }}">
+      <label for="max_follow_up_searches">Max follow-up searches</label>
+      <input id="max_follow_up_searches" name="max_follow_up_searches" type="number"
+             value="{{ limits.max_follow_up_searches }}">
+      <label for="max_critic_passes">Max critic passes</label>
+      <input id="max_critic_passes" name="max_critic_passes" type="number"
+             value="{{ limits.max_critic_passes }}">
+      <label for="max_run_duration_seconds">Max run duration (seconds)</label>
+      <input id="max_run_duration_seconds" name="max_run_duration_seconds" type="number"
+             value="{{ limits.max_run_duration_seconds }}">
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:1rem">
+    <h2>Sources</h2>
+    <div class="checks">
+      <label><input type="checkbox" name="source_tavily" value="1" {% if sources.tavily %}checked{% endif %}> Tavily</label>
+      <label><input type="checkbox" name="source_openalex" value="1" {% if sources.openalex %}checked{% endif %}> OpenAlex</label>
+      <label><input type="checkbox" name="source_crossref" value="1" {% if sources.crossref %}checked{% endif %}> Crossref</label>
+      <label><input type="checkbox" name="source_arxiv" value="1" {% if sources.arxiv %}checked{% endif %}> arXiv</label>
+      <label><input type="checkbox" name="source_mediawiki" value="1" {% if sources.mediawiki %}checked{% endif %}> MediaWiki</label>
+      <label><input type="checkbox" name="source_local" value="1" {% if sources.local %}checked{% endif %}> Local files</label>
+    </div>
+    <div class="actions">
+      <button type="submit">Save settings</button>
+    </div>
+  </section>
+</form>
+
+<section class="panel" style="margin-top:1rem">
+  <h2>Local files</h2>
+  <form method="post" action="/projects/{{ project_key }}/files" enctype="multipart/form-data">
+    <label for="files">Upload PDF / HTML / MD / TXT / DOCX</label>
+    <input id="files" name="files" type="file" multiple>
+    <div class="actions">
+      <button type="submit" class="secondary">Import files</button>
+    </div>
+  </form>
+  {% if documents %}
+  <table>
+    <thead><tr><th>Title</th><th>Type</th><th>Source</th></tr></thead>
+    <tbody>
+      {% for d in documents %}
+      <tr>
+        <td>{{ d.title or d.id }}</td>
+        <td>{{ d.media_type }}</td>
+        <td>{{ d.source_class }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No documents yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel" style="margin-top:1rem">
+  <h2>Runs</h2>
+  <form method="post" action="/projects/{{ project_key }}/runs">
+    <div class="actions">
+      <button type="submit">Start research run</button>
+      {% if runs %}
+      <a class="btn secondary" href="/projects/{{ project_key }}/plan">Latest plan</a>
+      {% endif %}
+    </div>
+  </form>
+  {% if runs %}
+  <table>
+    <thead><tr><th>Run</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td><code>{{ r.id[:8] }}…</code></td>
+        <td><span class="status">{{ r.status }}</span></td>
+        <td>
+          <a href="/projects/{{ project_key }}/plan?run_id={{ r.id }}">Plan</a>
+          · <a href="/projects/{{ project_key }}/runs/{{ r.id }}">Live</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Export — {{ project.title }}{% endblock %}
+{% block content %}
+<h1>PDF preview &amp; export</h1>
+<p class="muted">Artifacts remain available even when PDF compilation is skipped.</p>
+
+<section class="panel">
+  <h2>PDF</h2>
+  {% if pdf_artifacts %}
+  <ul>
+    {% for a in pdf_artifacts %}
+    <li>
+      <a href="/projects/{{ project_key }}/artifacts/{{ a.id }}">{{ a.path_or_name or a.id }}</a>
+      <span class="muted">({{ a.byte_size or 0 }} bytes)</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No PDF artifact yet (compilation may have been skipped).</p>
+  {% endif %}
+</section>
+
+<section class="panel" style="margin-top:1rem">
+  <h2>Other artifacts</h2>
+  {% if other_artifacts %}
+  <table>
+    <thead><tr><th>Kind</th><th>Name</th><th>Size</th><th></th></tr></thead>
+    <tbody>
+      {% for a in other_artifacts %}
+      <tr>
+        <td>{{ a.kind }}</td>
+        <td>{{ a.path_or_name or a.id }}</td>
+        <td>{{ a.byte_size or 0 }}</td>
+        <td>
+          {% if a.has_data %}
+          <a href="/projects/{{ project_key }}/artifacts/{{ a.id }}">Download</a>
+          {% else %}
+          <span class="muted">no data</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No artifacts stored yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

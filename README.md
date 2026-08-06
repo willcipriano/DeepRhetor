@@ -4,9 +4,8 @@ DeepRhetor is a local research-and-writing application. Given a descriptive
 prompt, it plans research, discovers and archives sources, builds a grounded
 claim inventory with exact evidence, and produces a polished cited LaTeX report.
 
-**Status:** Stages 1–7 complete (through knowledge inventory, evidence
-verification, and coverage critic loop). See [PLAN.md](PLAN.md) for
-architecture and remaining build stages.
+**Status:** Stages 1–9 complete (through local FastAPI/Jinja/HTMX product UI).
+See [PLAN.md](PLAN.md) for architecture and remaining build stages.
 
 ## Locked stack
 
@@ -17,7 +16,7 @@ architecture and remaining build stages.
 | Orchestration | **LangGraph** as a thin workflow scheduler only |
 | Agents | No application-level LangChain agents or chat wrappers |
 | Persistence | One SQLite file per project |
-| UI (later) | FastAPI + Jinja + HTMX |
+| UI | FastAPI + Jinja + HTMX (localhost) |
 
 ## Cost / capability ladder
 
@@ -41,6 +40,7 @@ pip install -e ".[dev]"
 cp config.example.toml path/to/your/config.toml
 
 deeprhetor version
+deeprhetor serve --port 8765
 deeprhetor project create --path ./demo.deeprhetor --title Demo --prompt "Explain X"
 deeprhetor project backup --path ./demo.deeprhetor --dest ./demo-backup.deeprhetor
 pytest

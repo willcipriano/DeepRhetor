@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Run — {{ project.title }}{% endblock %}
+{% block content %}
+<h1>Live run</h1>
+<p class="muted">
+  Run <code>{{ run.id }}</code> · <span class="status" id="run-status">{{ run.status }}</span>
+  · <a href="/projects/{{ project_key }}/plan?run_id={{ run.id }}">Plan</a>
+  · <a href="/projects/{{ project_key }}/recovery">Recovery</a>
+</p>
+
+<div class="grid two">
+  <section class="panel">
+    <h2>Topics / tasks</h2>
+    {% if tasks %}
+    <table>
+      <thead><tr><th>Kind</th><th>Status</th><th>Error</th></tr></thead>
+      <tbody>
+        {% for t in tasks %}
+        <tr>
+          <td>{{ t.kind }}{% if t.assignment and t.assignment.get('topic_id') %} <span class="muted">({{ t.assignment.get('topic_id') }})</span>{% endif %}</td>
+          <td><span class="status">{{ t.status }}</span></td>
+          <td class="muted">{{ t.error_message or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No tasks yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Documents · claims · scans</h2>
+    <p><strong>{{ documents|length }}</strong> documents · <strong>{{ claims|length }}</strong> claims ·
+       <strong>{{ incomplete_scans|length }}</strong> incomplete scans</p>
+    {% if errors %}
+    <h2>Errors</h2>
+    <ul>
+      {% for e in errors %}
+      <li class="muted">{{ e.message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel" style="margin-top:1rem">
+  <h2>Event stream</h2>
+  <div id="event-log" class="event-log" hx-ext="">
+    {% for ev in events %}
+    <div class="{% if ev.level == 'error' %}err{% endif %}">
+      <span class="meta">{{ ev.created_at }}</span> [{{ ev.kind }}] {{ ev.message }}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<script>
+(function () {
+  const log = document.getElementById("event-log");
+  const statusEl = document.getElementById("run-status");
+  const es = new EventSource("/runs/{{ run.id }}/events{% if events %}?after={{ events[-1].id }}{% endif %}");
+  function append(ev, data) {
+    const div = document.createElement("div");
+    if (data.level === "error") div.className = "err";
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = data.created_at || "";
+    div.appendChild(meta);
+    div.appendChild(document.createTextNode(" [" + (data.kind || ev.type) + "] " + (data.message || JSON.stringify(data))));
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  es.onmessage = function (e) {
+    try { append(e, JSON.parse(e.data)); } catch (_) {}
+  };
+  es.addEventListener("run.status", function (e) {
+    try {
+      const data = JSON.parse(e.data);
+      if (statusEl && data.status) statusEl.textContent = data.status;
+    } catch (_) {}
+  });
+  es.addEventListener("stream.end", function () { es.close(); });
+  // Named event kinds also carry the same JSON payload.
+  ["ui.run.start","ui.run.error","workflow.stage","ui.plan.decision","ui.run.resume"].forEach(function (name) {
+    es.addEventListener(name, function (e) {
+      try { append(e, JSON.parse(e.data)); } catch (_) {}
+    });
+  });
+})();
+</script>
+{% endblock %}

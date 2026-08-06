@@ -128,24 +128,79 @@ class EventRepository(BaseRepository):
             result = await conn.execute(
                 text(
                     "SELECT id, run_id, task_id, level, kind, message, payload_json, created_at "
-                    "FROM event WHERE run_id = :run_id ORDER BY created_at ASC"
+                    "FROM event WHERE run_id = :run_id ORDER BY created_at ASC, id ASC"
                 ),
                 {"run_id": run_id},
             )
             rows = result.mappings().all()
-        return [
-            Event(
-                id=row["id"],
-                run_id=row["run_id"],
-                task_id=row["task_id"],
-                level=row["level"],
-                kind=row["kind"],
-                message=row["message"],
-                payload=loads_json(row["payload_json"]),
-                created_at=parse_dt(row["created_at"]) or utcnow(),
+        return [self._from_row(row) for row in rows]
+
+    async def list_for_run_after(
+        self,
+        run_id: str,
+        *,
+        after_id: str | None = None,
+        limit: int = 200,
+    ) -> list[Event]:
+        """Return events for a run strictly after ``after_id`` (cursor by created_at, id)."""
+        if after_id is None:
+            async with self.connection() as conn:
+                result = await conn.execute(
+                    text(
+                        "SELECT id, run_id, task_id, level, kind, message, payload_json, created_at "
+                        "FROM event WHERE run_id = :run_id "
+                        "ORDER BY created_at ASC, id ASC LIMIT :limit"
+                    ),
+                    {"run_id": run_id, "limit": limit},
+                )
+                rows = result.mappings().all()
+            return [self._from_row(row) for row in rows]
+
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                text("SELECT created_at, id FROM event WHERE id = :id"),
+                {"id": after_id},
             )
-            for row in rows
-        ]
+            cursor_row = cursor.mappings().first()
+            if cursor_row is None:
+                result = await conn.execute(
+                    text(
+                        "SELECT id, run_id, task_id, level, kind, message, payload_json, created_at "
+                        "FROM event WHERE run_id = :run_id "
+                        "ORDER BY created_at ASC, id ASC LIMIT :limit"
+                    ),
+                    {"run_id": run_id, "limit": limit},
+                )
+            else:
+                result = await conn.execute(
+                    text(
+                        "SELECT id, run_id, task_id, level, kind, message, payload_json, created_at "
+                        "FROM event WHERE run_id = :run_id AND "
+                        "(created_at > :created_at OR "
+                        "(created_at = :created_at AND id > :after_id)) "
+                        "ORDER BY created_at ASC, id ASC LIMIT :limit"
+                    ),
+                    {
+                        "run_id": run_id,
+                        "created_at": cursor_row["created_at"],
+                        "after_id": after_id,
+                        "limit": limit,
+                    },
+                )
+            rows = result.mappings().all()
+        return [self._from_row(row) for row in rows]
+
+    def _from_row(self, row: Any) -> Event:
+        return Event(
+            id=row["id"],
+            run_id=row["run_id"],
+            task_id=row["task_id"],
+            level=row["level"],
+            kind=row["kind"],
+            message=row["message"],
+            payload=loads_json(row["payload_json"]),
+            created_at=parse_dt(row["created_at"]) or utcnow(),
+        )
 
 
 class ErrorRepository(BaseRepository):
@@ -312,6 +367,48 @@ class ArtifactRepository(BaseRepository):
             )
             row = result.mappings().first()
         return _artifact_from_row(row) if row else None
+
+    async def get_data(self, artifact_id: str) -> bytes | None:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text("SELECT data FROM artifact WHERE id = :id"),
+                {"id": artifact_id},
+            )
+            row = result.first()
+        if row is None:
+            return None
+        data = row[0]
+        return bytes(data) if data is not None else None
+
+    async def list_for_project(self, project_id: str) -> list[Artifact]:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, project_id, run_id, kind, media_type, path_or_name, sha256, "
+                    "byte_size, idempotency_key, created_at, "
+                    "(data IS NOT NULL) AS has_data "
+                    "FROM artifact WHERE project_id = :project_id "
+                    "ORDER BY created_at DESC"
+                ),
+                {"project_id": project_id},
+            )
+            rows = result.mappings().all()
+        return [_artifact_from_row(row) for row in rows]
+
+    async def list_for_run(self, run_id: str) -> list[Artifact]:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, project_id, run_id, kind, media_type, path_or_name, sha256, "
+                    "byte_size, idempotency_key, created_at, "
+                    "(data IS NOT NULL) AS has_data "
+                    "FROM artifact WHERE run_id = :run_id "
+                    "ORDER BY created_at DESC"
+                ),
+                {"run_id": run_id},
+            )
+            rows = result.mappings().all()
+        return [_artifact_from_row(row) for row in rows]
 
 
 class ModelCallRepository(BaseRepository):

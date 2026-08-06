@@ -16,9 +16,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("version", help="Print package version")
 
-    serve = sub.add_parser("serve", help="Start the local web application (stub)")
+    serve = sub.add_parser("serve", help="Start the local web application on loopback")
     serve.add_argument("--host", default="127.0.0.1", help="Bind host (loopback default)")
     serve.add_argument("--port", type=int, default=8765, help="Bind port")
+    serve.add_argument(
+        "--projects-dir",
+        default=None,
+        help="Directory for .deeprhetor project files (default: ./projects)",
+    )
 
     project = sub.add_parser("project", help="Manage portable project SQLite files")
     project_sub = project.add_subparsers(dest="project_command", required=True)
@@ -59,18 +64,27 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "serve":
-        print(
-            f"deeprhetor serve is not implemented yet "
-            f"(would bind {args.host}:{args.port}).",
-            file=sys.stderr,
-        )
-        return 0
+        return _handle_serve(args)
 
     if args.command == "project":
         return _handle_project(args)
 
     parser.error(f"unknown command: {args.command}")
     return 2
+
+
+def _handle_serve(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from deeprhetor.web import create_app
+
+    host = args.host or "127.0.0.1"
+    projects_dir = Path(args.projects_dir) if args.projects_dir else Path.cwd() / "projects"
+    app = create_app(projects_dir=projects_dir)
+    print(f"DeepRhetor listening on http://{host}:{args.port}", flush=True)
+    print(f"Projects directory: {projects_dir.resolve()}", flush=True)
+    uvicorn.run(app, host=host, port=args.port, log_level="info")
+    return 0
 
 
 def _handle_project(args: argparse.Namespace) -> int:

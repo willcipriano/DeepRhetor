@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Corpus — {{ project.title }}{% endblock %}
+{% block content %}
+<h1>Corpus &amp; claims</h1>
+
+<div class="grid two">
+  <section class="panel">
+    <h2>Documents</h2>
+    {% if documents %}
+    <table>
+      <thead><tr><th>Title</th><th>Segments</th><th>Scan</th></tr></thead>
+      <tbody>
+        {% for row in documents %}
+        <tr>
+          <td>{{ row.doc.title or row.doc.id }}
+            <div class="muted">{{ row.doc.source_class }} · {{ row.doc.media_type }}</div>
+          </td>
+          <td>{{ row.segments }}</td>
+          <td>{% if row.scan %}<span class="status">{% if row.scan.is_complete %}complete{% else %}{{ row.scan.completed_segments }}/{{ row.scan.total_segments }}{% endif %}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No archived documents.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Claims</h2>
+    {% if claims %}
+    <table>
+      <thead><tr><th>Statement</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for c in claims %}
+        <tr>
+          <td><a href="/projects/{{ project_key }}/corpus?claim_id={{ c.id }}">{{ c.statement[:160] }}{% if c.statement|length > 160 %}…{% endif %}</a></td>
+          <td><span class="status">{{ c.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No claims yet.</p>
+    {% endif %}
+  </section>
+</div>
+
+{% if selected_claim %}
+<section class="panel" style="margin-top:1rem">
+  <h2>Claim detail</h2>
+  <p><span class="status">{{ selected_claim.status }}</span></p>
+  <pre class="prose">{{ selected_claim.statement }}</pre>
+  <h2>Evidence</h2>
+  {% if evidence_pairs %}
+  <ul class="stack">
+    {% for evidence, link in evidence_pairs %}
+    <li class="panel">
+      <div class="muted">{{ link.relation }} · {{ link.directness }}</div>
+      <blockquote>{{ evidence.quote }}</blockquote>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No evidence linked.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

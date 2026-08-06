@@ -174,6 +174,38 @@ class ProjectRepository(BaseRepository):
             credential_refs=credential_refs or {},
         )
 
+    async def update(
+        self,
+        project_id: str,
+        *,
+        title: str | None = None,
+        prompt: str | None = None,
+        status: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Project | None:
+        fields = ["updated_at = :updated_at"]
+        params: dict[str, Any] = {"id": project_id, "updated_at": iso_now()}
+        if title is not None:
+            fields.append("title = :title")
+            params["title"] = title
+        if prompt is not None:
+            fields.append("prompt = :prompt")
+            params["prompt"] = prompt
+        if status is not None:
+            fields.append("status = :status")
+            params["status"] = status
+        if metadata is not None:
+            fields.append("metadata_json = :metadata_json")
+            params["metadata_json"] = dumps_json(metadata)
+        if len(fields) == 1:
+            return await self.get(project_id)
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                text(f"UPDATE project SET {', '.join(fields)} WHERE id = :id"),
+                params,
+            )
+        return await self.get(project_id)
+
     async def get_configuration_snapshot(
         self, snapshot_id: str
     ) -> ConfigurationSnapshot | None:

@@ -210,6 +210,22 @@ class DraftRepository(BaseRepository):
             row = result.mappings().first()
         if row is None:
             return None
+        return self._from_row(row)
+
+    async def latest_for_project(self, project_id: str) -> StoredDraft | None:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, project_id, outline_id, title, status, draft_json, "
+                    "created_at, updated_at FROM draft WHERE project_id = :project_id "
+                    "ORDER BY updated_at DESC LIMIT 1"
+                ),
+                {"project_id": project_id},
+            )
+            row = result.mappings().first()
+        return self._from_row(row) if row else None
+
+    def _from_row(self, row: Any) -> StoredDraft:
         payload = loads_json(row["draft_json"], default={})
         draft = StructuredDraft.model_validate(payload)
         return StoredDraft(
@@ -345,6 +361,22 @@ class ValidationResultRepository(BaseRepository):
             row = result.mappings().first()
         if row is None:
             return None
+        return self._from_row(row)
+
+    async def latest_for_draft(self, draft_id: str) -> ValidationResult | None:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, draft_id, outcome, result_json, created_at "
+                    "FROM validation_result WHERE draft_id = :draft_id "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"draft_id": draft_id},
+            )
+            row = result.mappings().first()
+        return self._from_row(row) if row else None
+
+    def _from_row(self, row: Any) -> ValidationResult:
         payload = loads_json(row["result_json"], default={})
         vr = ValidationResult.model_validate(payload)
         return vr.model_copy(

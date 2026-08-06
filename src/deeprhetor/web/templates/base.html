@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DeepRhetor{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/">DeepRhetor</a>
+    <nav>
+      {% if project_key %}
+        <a href="/projects/{{ project_key }}" class="{% if nav_active == 'settings' %}active{% endif %}">Project</a>
+        <a href="/projects/{{ project_key }}/plan" class="{% if nav_active == 'plan' %}active{% endif %}">Plan</a>
+        <a href="/projects/{{ project_key }}/corpus" class="{% if nav_active == 'corpus' %}active{% endif %}">Corpus</a>
+        <a href="/projects/{{ project_key }}/draft" class="{% if nav_active == 'draft' %}active{% endif %}">Draft</a>
+        <a href="/projects/{{ project_key }}/export" class="{% if nav_active == 'export' %}active{% endif %}">Export</a>
+        <a href="/projects/{{ project_key }}/recovery" class="{% if nav_active == 'recovery' %}active{% endif %}">Recovery</a>
+      {% else %}
+        <a href="/" class="{% if nav_active == 'home' %}active{% endif %}">Projects</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% if message %}<div class="flash">{{ message }}</div>{% endif %}
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
