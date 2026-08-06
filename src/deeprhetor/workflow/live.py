@@ -421,6 +421,7 @@ def build_live_components(
     # Prefer free + Tavily for the first live path (skip arxiv/openalex rate limits).
     from deeprhetor.plugins.mediawiki import MediaWikiSearchProvider
     from deeprhetor.plugins.tavily import TavilySearchProvider
+    from deeprhetor.services.llm_claims import OpenRouterClaimProposer
 
     providers = SearchProviderRegistry()
     providers.register(MediaWikiSearchProvider())
@@ -435,7 +436,8 @@ def build_live_components(
     )
     primary = build_openrouter_supervisor(cfg, project_id=project_id)
     supervisor = ResilientSupervisor(primary, FallbackThesisSupervisor())
-    proposer = SegmentClaimProposer()
+    heuristic = SegmentClaimProposer()
+    proposer = OpenRouterClaimProposer(config=cfg, fallback=heuristic)
     critic = FakeCoverageCritic(force_complete=True)
     return {
         "config": cfg,

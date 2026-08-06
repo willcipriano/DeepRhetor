@@ -15,7 +15,6 @@ from deeprhetor.repositories.planning import ResearchPlanRepository
 from deeprhetor.services.outline import OutlineBuilderService
 from deeprhetor.services.project_store import create_project_async, open_project_async
 from deeprhetor.services.publish import PublicationService
-from deeprhetor.services.writer import WriterService
 from deeprhetor.workflow.live import build_live_components
 from deeprhetor.workflow.runtime import (
     open_workflow,
@@ -131,7 +130,9 @@ async def run_end_to_end(
         plan=plan_row.plan,
         title=title,
     )
-    writer = WriterService(opened.engine)
+    from deeprhetor.services.llm_writer import OpenRouterWriter
+
+    writer = OpenRouterWriter(config=cfg, engine=opened.engine)
     stored_draft, citation_map = await writer.build_and_persist(
         project_id=project_id,
         outline=stored_outline.outline,
@@ -180,6 +181,10 @@ async def run_end_to_end(
         "approved_claims": len(approved_claims),
         "publication_status": str(publication.status),
         "supervisor_fallback": getattr(live["supervisor"], "used_fallback", False),
+        "claim_proposer_fallback": getattr(live["proposer"], "used_fallback", False),
+        "claim_proposer_error": getattr(live["proposer"], "last_error", None),
+        "writer_fallback": getattr(writer, "used_fallback", False),
+        "writer_error": getattr(writer, "last_error", None),
         "worker_results": getattr(live["worker"], "results", []),
     }
     (export / "e2e_summary.json").write_text(
