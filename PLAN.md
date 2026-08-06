@@ -799,7 +799,7 @@ The MVP is successful when a user can:
 | 7 | Full-scan accounting, claims, evidence verification, critic loop, and completion gate | **Complete** |
 | 8 | Frontier writer, citation validator, LaTeX renderer, PDF, bibliography, and manifest | **Complete** |
 | 9 | FastAPI/Jinja/HTMX product UI and interrupted-run recovery experience | **Complete** |
-| 10 | Hardening, automated integrity tests, manual report evaluation, and MVP release | Pending |
+| 10 | Hardening, automated integrity tests, manual report evaluation, and MVP release | **Complete** (MVP `v0.1.0` release-ready; manual report eval via docs/MANUAL_ACCEPTANCE.md) |
 
 ```mermaid
 flowchart TD
