@@ -4,8 +4,8 @@
 > persistence, tools, and build stages. Decisions recorded here should not need
 > to be rediscovered from chat history.
 >
-> Stage 0 is the design captured in this file. Stages 1–2 (foundation and
-> persistence/recovery) are complete.
+> Stage 0 is the design captured in this file. Stages 1–3 (foundation,
+> persistence/recovery, and source vertical slice) are complete.
 
 ## Vision
 
@@ -790,7 +790,7 @@ The MVP is successful when a user can:
 | 0 | Product decisions and architecture source of truth | **Complete** |
 | 1 | Python package, configuration, Pydantic domain models, migrations, repositories | **Complete** |
 | 2 | Portable SQLite projects, FTS5 corpus, task ledger, artifacts, and recovery | **Complete** |
-| 3 | Provider/fetch/parser contracts plus local files and MediaWiki vertical slice | Pending |
+| 3 | Provider/fetch/parser contracts plus local files and MediaWiki vertical slice | **Complete** |
 | 4 | Pydantic AI model registry, OpenRouter adapter, role presets, and typed agents | Pending |
 | 5 | Thin LangGraph workflow with plan approval, worker fan-out, checkpoints, and replay safety | Pending |
 | 6 | Tavily, OpenAlex, Crossref, arXiv, secure fetch, headless browser, and OCR | Pending |

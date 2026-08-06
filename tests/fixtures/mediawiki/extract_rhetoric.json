@@ -1,0 +1,21 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "pages": {
+      "25391": {
+        "pageid": 25391,
+        "ns": 0,
+        "title": "Rhetoric",
+        "extract": "Rhetoric is the art of persuasion.\n\nClassical rhetoric developed in ancient Greece.\n\nModern usage covers academic and political speech.",
+        "fullurl": "https://en.wikipedia.org/wiki/Rhetoric",
+        "editurl": "https://en.wikipedia.org/w/index.php?title=Rhetoric&action=edit",
+        "canonicalurl": "https://en.wikipedia.org/wiki/Rhetoric",
+        "contentmodel": "wikitext",
+        "pagelanguage": "en",
+        "pagelanguagehtmlcode": "en",
+        "pagelanguagedir": "ltr",
+        "length": 42000
+      }
+    }
+  }
+}

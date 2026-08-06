@@ -1,0 +1,26 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "searchinfo": {"totalhits": 2},
+    "search": [
+      {
+        "ns": 0,
+        "title": "Rhetoric",
+        "pageid": 25391,
+        "size": 42000,
+        "wordcount": 5600,
+        "snippet": "Rhetoric is the art of persuasion.",
+        "timestamp": "2024-01-15T12:00:00Z"
+      },
+      {
+        "ns": 0,
+        "title": "Aristotle",
+        "pageid": 908,
+        "size": 110000,
+        "wordcount": 14000,
+        "snippet": "Aristotle wrote on <span class=\"searchmatch\">rhetoric</span>.",
+        "timestamp": "2024-02-01T08:30:00Z"
+      }
+    ]
+  }
+}

@@ -34,6 +34,14 @@ from .planning import (
 )
 from .discovery import SearchHit, SearchRequest, SearchResponse
 from .publication import PublicationResult, ValidationIssue, ValidationResult
+from .sources import (
+    FetchRequest,
+    FetchResult,
+    ParsedDocument,
+    ParsedSegment,
+    ProviderDescriptor,
+    RawDocument,
+)
 from .writing import DraftSection, Outline, OutlineSection, StructuredDraft
 
 SCHEMA_VERSION = 1
@@ -49,13 +57,19 @@ __all__ = [
     "DraftSection",
     "EvidenceDirectness",
     "EvidenceRelation",
+    "FetchRequest",
+    "FetchResult",
     "Outline",
     "OutlineSection",
+    "ParsedDocument",
+    "ParsedSegment",
     "ParsedSourceMetadata",
     "PlanStatus",
     "ProposedClaim",
+    "ProviderDescriptor",
     "PublicationResult",
     "PublicationStatus",
+    "RawDocument",
     "RelevanceAssessment",
     "ResearchPlan",
     "RhetoricalPosture",
