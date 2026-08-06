@@ -304,6 +304,19 @@ class DocumentRepository(BaseRepository):
             for row in rows
         ]
 
+    async def get_version(self, version_id: str) -> DocumentVersion | None:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, document_id, version, original_url, content_sha256, "
+                    "normalized_sha256, parser, parser_version, created_at "
+                    "FROM document_version WHERE id = :id"
+                ),
+                {"id": version_id},
+            )
+            row = result.mappings().first()
+        return self._version_from_row(row) if row else None
+
     async def latest_version(self, document_id: str) -> DocumentVersion | None:
         async with self.connection() as conn:
             result = await conn.execute(
@@ -316,8 +329,9 @@ class DocumentRepository(BaseRepository):
                 {"did": document_id},
             )
             row = result.mappings().first()
-        if row is None:
-            return None
+        return self._version_from_row(row) if row else None
+
+    def _version_from_row(self, row: Any) -> DocumentVersion:
         return DocumentVersion(
             id=row["id"],
             document_id=row["document_id"],

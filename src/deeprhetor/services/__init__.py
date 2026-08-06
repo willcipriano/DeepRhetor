@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from .acquisition import AcquisitionPipeline, AcquisitionResult
 from .checkpoint import CheckpointRecord, CheckpointStore
+from .citation_validate import CitationValidator
 from .critic import CoverageCriticService, CriticLoopState, CriticPassResult
 from .fetch import (
     DEFAULT_MAX_BYTES,
@@ -16,7 +17,9 @@ from .fetch import (
     validate_public_url,
 )
 from .fts import ClaimFtsHit, DocumentFtsHit, FtsService
+from .latex import CompileResult, LatexRenderer, RenderedLatex, toolchain_ready
 from .local_import import LocalFileImporter
+from .outline import OutlineBuilderService
 from .project_store import (
     DEFAULT_EXTENSION,
     PREFERRED_EXTENSIONS,
@@ -28,9 +31,11 @@ from .project_store import (
     open_project,
     open_project_async,
 )
+from .publish import PublicationService
 from .recovery import RecoveryReport, RecoveryService, mark_orphaned_in_progress
 from .scan import BatchScanResult, ScanService
 from .verify import QuoteCheckResult, VerifierService
+from .writer import WriterService
 
 if TYPE_CHECKING:
     from .mediawiki_import import MediaWikiImporter as MediaWikiImporter
@@ -51,7 +56,9 @@ __all__ = [
     "BatchScanResult",
     "CheckpointRecord",
     "CheckpointStore",
+    "CitationValidator",
     "ClaimFtsHit",
+    "CompileResult",
     "CoverageCriticService",
     "CriticLoopState",
     "CriticPassResult",
@@ -61,17 +68,22 @@ __all__ = [
     "DocumentFtsHit",
     "FetchError",
     "FtsService",
+    "LatexRenderer",
     "LocalFileImporter",
     "MediaWikiImporter",
     "OpenProject",
+    "OutlineBuilderService",
     "PREFERRED_EXTENSIONS",
+    "PublicationService",
     "QuoteCheckResult",
     "RecoveryReport",
     "RecoveryService",
+    "RenderedLatex",
     "SSRFBlockedError",
     "ScanService",
     "SecureHttpFetcher",
     "VerifierService",
+    "WriterService",
     "backup_project",
     "create_project",
     "create_project_async",
@@ -79,5 +91,6 @@ __all__ = [
     "normalize_project_path",
     "open_project",
     "open_project_async",
+    "toolchain_ready",
     "validate_public_url",
 ]
