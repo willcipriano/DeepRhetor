@@ -15,6 +15,7 @@ from deeprhetor.domain.publication import ValidationResult
 from deeprhetor.domain.writing import (
     BibEntry,
     CitationKey,
+    MarkdownDraft,
     Outline,
     StructuredDraft,
 )
@@ -37,7 +38,8 @@ class StoredDraft(BaseModel):
     outline_id: str | None = None
     title: str
     status: str = "draft"
-    draft: StructuredDraft
+    draft: StructuredDraft | None = None
+    markdown_draft: MarkdownDraft | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -137,7 +139,7 @@ class DraftRepository(BaseRepository):
 
     async def create(
         self,
-        draft: StructuredDraft,
+        draft: StructuredDraft | MarkdownDraft,
         *,
         project_id: str,
         outline_id: str | None = None,
@@ -145,11 +147,11 @@ class DraftRepository(BaseRepository):
         draft_id: str | None = None,
     ) -> StoredDraft:
         did = draft_id or draft.id or str(uuid4())
-        stored = draft.model_copy(
-            update={"id": did, "outline_id": outline_id or draft.outline_id}
-        )
+        oid = outline_id or draft.outline_id
+        stored = draft.model_copy(update={"id": did, "outline_id": oid})
         now = utcnow()
         iso = now.replace(microsecond=0).isoformat()
+        is_markdown = isinstance(stored, MarkdownDraft) or getattr(stored, "format", None) == "markdown"
         async with self._engine.begin() as conn:
             await conn.execute(
                 text(
@@ -161,39 +163,41 @@ class DraftRepository(BaseRepository):
                 {
                     "id": did,
                     "project_id": project_id,
-                    "outline_id": outline_id or draft.outline_id,
+                    "outline_id": oid,
                     "title": draft.title,
-                    "status": status,
+                    "status": "markdown" if is_markdown else status,
                     "draft_json": dumps_json(stored.model_dump(mode="json")),
                     "created_at": iso,
                     "updated_at": iso,
                 },
             )
-            for section in stored.sections:
-                await conn.execute(
-                    text(
-                        "INSERT INTO draft_section "
-                        "(id, draft_id, section_id, title, prose, sort_order, section_json) "
-                        "VALUES (:id, :draft_id, :section_id, :title, :prose, :sort_order, "
-                        ":section_json)"
-                    ),
-                    {
-                        "id": str(uuid4()),
-                        "draft_id": did,
-                        "section_id": section.section_id,
-                        "title": section.title,
-                        "prose": section.prose,
-                        "sort_order": section.order,
-                        "section_json": dumps_json(section.model_dump(mode="json")),
-                    },
-                )
+            if isinstance(stored, StructuredDraft):
+                for section in stored.sections:
+                    await conn.execute(
+                        text(
+                            "INSERT INTO draft_section "
+                            "(id, draft_id, section_id, title, prose, sort_order, section_json) "
+                            "VALUES (:id, :draft_id, :section_id, :title, :prose, :sort_order, "
+                            ":section_json)"
+                        ),
+                        {
+                            "id": str(uuid4()),
+                            "draft_id": did,
+                            "section_id": section.section_id,
+                            "title": section.title,
+                            "prose": section.prose,
+                            "sort_order": section.order,
+                            "section_json": dumps_json(section.model_dump(mode="json")),
+                        },
+                    )
         return StoredDraft(
             id=did,
             project_id=project_id,
-            outline_id=outline_id or draft.outline_id,
+            outline_id=oid,
             title=draft.title,
-            status=status,
-            draft=stored,
+            status="markdown" if is_markdown else status,
+            draft=stored if isinstance(stored, StructuredDraft) else None,
+            markdown_draft=stored if isinstance(stored, MarkdownDraft) else None,
             created_at=now,
             updated_at=now,
         )
@@ -227,14 +231,29 @@ class DraftRepository(BaseRepository):
 
     def _from_row(self, row: Any) -> StoredDraft:
         payload = loads_json(row["draft_json"], default={})
-        draft = StructuredDraft.model_validate(payload)
+        is_markdown = (
+            isinstance(payload, dict)
+            and (payload.get("format") == "markdown" or "markdown" in payload)
+            and "sections" not in payload
+        ) or (isinstance(payload, dict) and payload.get("format") == "markdown")
+        structured = None
+        markdown_draft = None
+        if is_markdown:
+            markdown_draft = MarkdownDraft.model_validate(payload).model_copy(
+                update={"id": row["id"]}
+            )
+        else:
+            structured = StructuredDraft.model_validate(payload).model_copy(
+                update={"id": row["id"]}
+            )
         return StoredDraft(
             id=row["id"],
             project_id=row["project_id"],
             outline_id=row["outline_id"],
             title=row["title"],
             status=row["status"],
-            draft=draft.model_copy(update={"id": row["id"]}),
+            draft=structured,
+            markdown_draft=markdown_draft,
             created_at=parse_dt(row["created_at"]) or utcnow(),
             updated_at=parse_dt(row["updated_at"]) or utcnow(),
         )

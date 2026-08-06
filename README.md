@@ -4,6 +4,9 @@ DeepRhetor is a local research-and-writing application. Given a descriptive
 prompt, it plans research, discovers and archives sources, builds a grounded
 claim inventory with exact evidence, and produces a polished cited LaTeX report.
 
+The frontier writer drafts in Markdown; a separate AI typesetting phase converts
+that Markdown into controlled LaTeX for the curated scholarly template.
+
 **Status:** MVP `0.1.0` (Stages 0–10 complete). Report quality is evaluated
 manually; see [docs/MANUAL_ACCEPTANCE.md](docs/MANUAL_ACCEPTANCE.md). Automated
 integrity coverage lives in `tests/test_integrity.py` and the stage test
@@ -69,7 +72,9 @@ See `config.example.toml` for model presets and safety limits.
 
 ### 3. TeX toolchain (PDF export)
 
-Publication emits `.tex` / `.bib` always. PDF compile needs:
+Publication emits `report.md` (Markdown draft) plus `.tex` / `.bib` always.
+PDF compile needs:
+
 
 - [Pandoc](https://pandoc.org/)
 - [Tectonic](https://tectonic-typesetting.github.io/)

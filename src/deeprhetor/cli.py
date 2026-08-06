@@ -148,6 +148,8 @@ def _handle_run(args: argparse.Namespace) -> int:
         )
     if result.tex_path:
         print(f"tex: {result.tex_path}", flush=True)
+    if getattr(result, "markdown_path", None):
+        print(f"markdown: {result.markdown_path}", flush=True)
     if result.bib_path:
         print(f"bib: {result.bib_path}", flush=True)
     if result.manifest_path:

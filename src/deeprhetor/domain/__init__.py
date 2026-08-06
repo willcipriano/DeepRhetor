@@ -54,9 +54,12 @@ from .writing import (
     BibEntry,
     CitationKey,
     DraftSection,
+    MarkdownDraft,
     Outline,
     OutlineSection,
     StructuredDraft,
+    TypesetDocument,
+    TypesetSection,
 )
 
 SCHEMA_VERSION = 1
@@ -78,6 +81,7 @@ __all__ = [
     "EvidenceRelation",
     "FetchRequest",
     "FetchResult",
+    "MarkdownDraft",
     "Outline",
     "OutlineSection",
     "ParsedDocument",
@@ -101,6 +105,8 @@ __all__ = [
     "SegmentScanResult",
     "StructuredDraft",
     "TaskStatus",
+    "TypesetDocument",
+    "TypesetSection",
     "ValidationIssue",
     "ValidationOutcome",
     "ValidationResult",

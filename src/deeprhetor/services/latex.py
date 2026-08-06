@@ -172,6 +172,45 @@ class LatexRenderer:
             sections=sections,
         )
 
+    def render_typeset(
+        self,
+        typeset: "TypesetDocument",
+        citations: Mapping[str, CitationKey],
+    ) -> RenderedLatex:
+        """Assemble AI/deterministic typeset bodies into the curated scholarly template."""
+        from deeprhetor.domain.writing import TypesetDocument
+
+        assert isinstance(typeset, TypesetDocument)
+        sections = []
+        for section in sorted(typeset.sections, key=lambda s: s.order):
+            sections.append(
+                {
+                    "section_id": _sanitize_label(section.section_id),
+                    "title": escape_latex(section.title),
+                    # body_latex is already TeX from the typesetter (sanitized upstream).
+                    "body": section.body_latex,
+                }
+            )
+        abstract = typeset.abstract_latex or ""
+        tex = self._env.get_template("scholarly.tex.j2").render(
+            title=escape_latex(typeset.title),
+            author=escape_latex(self.author),
+            date=escape_latex(self.date_str),
+            abstract=abstract,
+            sections=sections,
+        )
+        used_keys = set(typeset.bibliography_keys)
+        for section in typeset.sections:
+            used_keys.update(re.findall(r"\\cite\{([A-Za-z0-9_.:-]+)\}", section.body_latex))
+        subset = {k: citations[k] for k in sorted(used_keys) if k in citations}
+        bib = self.render_bib(subset)
+        return RenderedLatex(
+            tex=tex,
+            bib=bib,
+            tex_sha256=hashlib.sha256(tex.encode("utf-8")).hexdigest(),
+            bib_sha256=hashlib.sha256(bib.encode("utf-8")).hexdigest(),
+        )
+
     def render(
         self,
         draft: StructuredDraft,

@@ -197,10 +197,11 @@ flowchart TD
   verifier --> critic[CoverageCriticMid]
   critic -->|gaps| dispatcher
   critic -->|complete| writer[WriterFrontier]
-  writer --> structuredDraft[StructuredDraft]
-  structuredDraft --> validator[CitationValidator]
-  validator --> renderer[ControlledLaTeXRenderer]
-  renderer --> exports[PDF_TEX_BIB_Manifest]
+  writer --> markdownDraft[MarkdownDraft]
+  markdownDraft --> validator[CitationValidator]
+  validator --> typesetter[TypesetterAI]
+  typesetter --> renderer[ControlledLaTeXRenderer]
+  renderer --> exports[PDF_TEX_BIB_MD_Manifest]
 ```
 
 ## Pipeline behavior
@@ -379,14 +380,13 @@ The frontier writer receives:
 The writer does not receive web-search tools or direct source-ingestion tools.
 It may query approved claims through bounded read-only tools.
 
-Writer output uses a structured Pydantic model containing section hierarchy,
-prose blocks, citation references, optional tables/figures, and section
-completion notes. Prose itself may be free-form text, but citation references
-must be typed IDs.
+Writer output is a Markdown document (not LaTeX): section hierarchy via headings,
+prose, and typed citation markers such as `[@cite_key]`. A later typesetting
+phase converts that Markdown into controlled LaTeX for the curated template.
 
 ### 9. Validation and publication
 
-Before rendering, deterministic validators confirm:
+Before typesetting and rendering, deterministic validators confirm:
 
 - every citation key resolves;
 - every cited claim is approved;
@@ -394,10 +394,12 @@ Before rendering, deterministic validators confirm:
 - no source or quotation was invented;
 - bibliography metadata is internally consistent;
 - required report sections are present;
-- no unsafe raw LaTeX commands are supplied by the model.
+- no unsafe raw LaTeX commands appear after typesetting.
 
-The publication pipeline generates controlled LaTeX from structured content.
-The model does not author the surrounding TeX program.
+The publication pipeline runs an AI typesetting phase that turns validated
+Markdown into LaTeX section bodies, then injects those bodies into a curated
+scholarly template. The frontier writer does not author the surrounding TeX
+program; the typesetter must not emit `\documentclass` / `\usepackage`.
 
 Initial rendering strategy:
 

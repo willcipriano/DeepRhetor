@@ -55,5 +55,7 @@ class PublicationResult(IdentifiedModel):
     pdf_compiled: bool = False
     pdf_skipped_reason: str | None = None
     manifest: ProvenanceManifest | None = None
+    markdown: str | None = None
+    markdown_artifact_id: str | None = None
     tex: str | None = None
     bib: str | None = None
