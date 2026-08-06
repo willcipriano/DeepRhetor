@@ -97,14 +97,18 @@ class TavilySearchProvider:
             if not isinstance(item, dict):
                 continue
             url = item.get("url")
-            title = item.get("title") or url or "Untitled"
+            url_str = str(url).strip() if url else ""
+            if url_str and not url_str.startswith(("http://", "https://")):
+                # Reject scheme-less or non-http candidates from discovery.
+                url_str = ""
+            title = item.get("title") or url_str or "Untitled"
             published = _parse_optional_datetime(item.get("published_date"))
             # Discovery only — retain snippet/score; never treat content as archive.
             hits.append(
                 SearchHit(
                     hit_id=str(item.get("id") or uuid4()),
                     title=str(title),
-                    url=str(url) if url else None,
+                    url=url_str or None,
                     snippet=item.get("content") or item.get("snippet"),
                     score=_as_float(item.get("score")),
                     published_at=published,

@@ -39,24 +39,70 @@ async def test_live_tavily_search_and_archive_fetch() -> None:
     assert key, f"providers.tavily.api_key missing in {config_path}"
 
     provider = TavilySearchProvider(config=config)
+    # Prefer a query that returns absolute https URLs (some queries yield
+    # Tavily /goto? redirect paths which the secure fetcher correctly rejects).
     response = await provider.search(
         SearchRequest(
-            query="Aristotle rhetoric inventio",
+            query="Aristotle Rhetoric Stanford Encyclopedia",
             provider="tavily",
-            max_results=3,
+            max_results=5,
         )
     )
     assert response.hits, "Tavily returned no hits"
-    hit = next((h for h in response.hits if h.url), None)
-    assert hit is not None and hit.url
+    hit = next(
+        (
+            h
+            for h in response.hits
+            if h.url and h.url.startswith(("http://", "https://"))
+        ),
+        None,
+    )
+    if hit is None:
+        # Retry with a simpler web query if the first batch was redirect-only.
+        response = await provider.search(
+            SearchRequest(
+                query="Aristotle rhetoric",
+                provider="tavily",
+                max_results=5,
+            )
+        )
+        hit = next(
+            (
+                h
+                for h in response.hits
+                if h.url and h.url.startswith(("http://", "https://"))
+            ),
+            None,
+        )
+    assert hit is not None and hit.url, "no hit with a public http(s) URL"
     assert hit.provider_metadata.get("discovery_only") is True
 
     # Archive via DeepRhetor secure fetch — not Tavily page body.
+    # Try several candidates; sites may 403 bots.
+    candidates = [
+        h
+        for h in response.hits
+        if h.url and h.url.startswith(("http://", "https://"))
+    ]
+    assert candidates, "no archiveable candidates"
+    last_error: Exception | None = None
+    archived = None
     async with SecureHttpFetcher(
         timeout_seconds=float(config.limits.fetch_timeout_seconds),
         max_bytes=config.limits.max_document_bytes,
     ) as fetcher:
-        archived = await fetcher.fetch(FetchRequest(url=hit.url, max_bytes=2_000_000))
+        for candidate in candidates:
+            assert candidate.url
+            try:
+                archived = await fetcher.fetch(
+                    FetchRequest(url=candidate.url, max_bytes=2_000_000)
+                )
+                if archived.status_code == 200 and archived.byte_size > 0:
+                    break
+            except Exception as exc:  # noqa: BLE001 — live flake tolerance
+                last_error = exc
+                archived = None
+    assert archived is not None, f"all candidate fetches failed: {last_error!r}"
     assert archived.byte_size > 0
     assert archived.sha256
     assert archived.status_code == 200
