@@ -52,6 +52,29 @@ def build_parser() -> argparse.ArgumentParser:
     backup.add_argument("--path", required=True, help="Source project path")
     backup.add_argument("--dest", required=True, help="Destination backup path")
 
+    run = sub.add_parser(
+        "run",
+        help="Run a live end-to-end research report (OpenRouter + search providers)",
+    )
+    run.add_argument("--prompt", required=True, help="Authoritative research prompt")
+    run.add_argument("--title", default=None, help="Project title (defaults to prompt)")
+    run.add_argument(
+        "--path",
+        default=None,
+        help="Project .deeprhetor path (default: ./projects/<slug>.deeprhetor)",
+    )
+    run.add_argument(
+        "--export-dir",
+        default=None,
+        help="Directory for .tex/.bib/manifest exports",
+    )
+    run.add_argument(
+        "--auto-approve",
+        action="store_true",
+        default=True,
+        help="Auto-approve the generated research plan (default)",
+    )
+
     return parser
 
 
@@ -69,8 +92,71 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "project":
         return _handle_project(args)
 
+    if args.command == "run":
+        return _handle_run(args)
+
     parser.error(f"unknown command: {args.command}")
     return 2
+
+
+def _handle_run(args: argparse.Namespace) -> int:
+    import asyncio
+    import re
+
+    from deeprhetor.services.e2e_run import run_end_to_end
+
+    prompt = args.prompt
+    title = args.title or prompt[:80]
+    if args.path:
+        path = Path(args.path)
+    else:
+        slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:48] or "project"
+        path = Path.cwd() / "projects" / f"{slug}.deeprhetor"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    export_dir = Path(args.export_dir) if args.export_dir else path.with_suffix("") / "exports"
+
+    print(f"DeepRhetor live run", flush=True)
+    print(f"  prompt: {prompt}", flush=True)
+    print(f"  project: {path}", flush=True)
+    print(f"  export: {export_dir}", flush=True)
+
+    try:
+        result = asyncio.run(
+            run_end_to_end(
+                prompt=prompt,
+                title=title,
+                project_path=path,
+                export_dir=export_dir,
+                auto_approve=True,
+            )
+        )
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"run_id: {result.run_id}", flush=True)
+    print(f"documents: {result.documents}", flush=True)
+    print(f"approved_claims: {result.approved_claims}", flush=True)
+    print(f"publication: {result.publication_status}", flush=True)
+    if result.supervisor_fallback:
+        print(f"supervisor_fallback: yes ({result.supervisor_error})", flush=True)
+    for worker in result.worker_summaries:
+        print(
+            f"  worker {worker.get('provider')}: "
+            f"hits={worker.get('hits')} archived={len(worker.get('archived_document_ids') or [])}",
+            flush=True,
+        )
+    if result.tex_path:
+        print(f"tex: {result.tex_path}", flush=True)
+    if result.bib_path:
+        print(f"bib: {result.bib_path}", flush=True)
+    if result.manifest_path:
+        print(f"manifest: {result.manifest_path}", flush=True)
+    if result.pdf_path:
+        print(f"pdf: {result.pdf_path}", flush=True)
+    else:
+        print("pdf: (not compiled — install pandoc + tectonic for PDF)", flush=True)
+    return 0 if result.approved_claims > 0 and result.tex_path else 1
 
 
 def _handle_serve(args: argparse.Namespace) -> int:
