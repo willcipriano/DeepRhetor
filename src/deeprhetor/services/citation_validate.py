@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from deeprhetor.domain.enums import ClaimStatus, ValidationOutcome
 from deeprhetor.domain.knowledge import quote_content_hash
 from deeprhetor.domain.publication import ValidationIssue, ValidationResult
-from deeprhetor.domain.writing import CitationKey, Outline, StructuredDraft
+from deeprhetor.domain.writing import CitationKey, MarkdownDraft, Outline, StructuredDraft
 from deeprhetor.repositories.document import DocumentRepository
 from deeprhetor.repositories.knowledge import ClaimRepository, EvidenceRepository
 from deeprhetor.repositories.writing import CitationKeyRepository, ValidationResultRepository
@@ -32,6 +32,28 @@ UNSAFE_LATEX_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 REQUIRED_SECTION_TITLES = frozenset({"introduction", "conclusion"})
+
+# Markdown citation markers: [@cite_001] or [^cite_001]
+_MD_CITE_PATTERNS = (
+    re.compile(r"\[@([A-Za-z0-9_.:-]+)\]"),
+    re.compile(r"\[\^([A-Za-z0-9_.:-]+)\]"),
+)
+
+
+def extract_markdown_citation_keys(markdown: str) -> set[str]:
+    keys: set[str] = set()
+    for pattern in _MD_CITE_PATTERNS:
+        keys.update(pattern.findall(markdown or ""))
+    return keys
+
+
+def markdown_heading_titles(markdown: str) -> set[str]:
+    titles: set[str] = set()
+    for line in (markdown or "").splitlines():
+        m = re.match(r"^#{1,6}\s+(.+?)\s*$", line.strip())
+        if m:
+            titles.add(m.group(1).strip().lower())
+    return titles
 
 
 class CitationValidator:
@@ -246,6 +268,208 @@ class CitationValidator:
                 )
 
             # Quote still matches archived location / text
+            normalized = await self.verifier.get_normalized_text(evidence.document_version_id)
+            segment_text = None
+            if evidence.document_segment_id:
+                seg = await self.verifier.get_segment(evidence.document_segment_id)
+                segment_text = seg.text if seg else None
+            check = self.verifier.check_quote_against_text(
+                evidence, normalized_text=normalized, segment_text=segment_text
+            )
+            if not check.ok:
+                issues.append(
+                    ValidationIssue(
+                        code="evidence_location_mismatch",
+                        message=(
+                            f"Cited evidence for {key} no longer matches archive: "
+                            + ", ".join(check.failures)
+                        ),
+                        path=f"citation_keys.{key}",
+                    )
+                )
+
+        errors = [i for i in issues if i.severity == "error"]
+        warnings = [i for i in issues if i.severity == "warning"]
+        if errors:
+            outcome = ValidationOutcome.FAILED
+        elif warnings:
+            outcome = ValidationOutcome.WARNINGS
+        else:
+            outcome = ValidationOutcome.PASSED
+
+        result = ValidationResult(draft_id=draft.id, outcome=outcome, issues=issues)
+        if persist:
+            result = await self.validations.create(result)
+        return result
+
+    async def validate_markdown(
+        self,
+        draft: MarkdownDraft,
+        *,
+        project_id: str,
+        outline: Outline | None = None,
+        citation_map: Mapping[str, CitationKey] | None = None,
+        persist: bool = True,
+    ) -> ValidationResult:
+        """Validate a frontier Markdown draft before AI typesetting."""
+        issues: list[ValidationIssue] = []
+        if citation_map is None:
+            stored = await self.citations.list_for_project(project_id)
+            citation_map = {c.key: c for c in stored}
+
+        if not draft.title.strip():
+            issues.append(
+                ValidationIssue(code="missing_title", message="Draft title is empty", path="title")
+            )
+        if not (draft.markdown or "").strip():
+            issues.append(
+                ValidationIssue(
+                    code="empty_markdown", message="Markdown draft body is empty", path="markdown"
+                )
+            )
+
+        issues.extend(self.scan_unsafe_latex(draft.markdown or "", path="markdown"))
+        if draft.abstract:
+            issues.extend(self.scan_unsafe_latex(draft.abstract, path="abstract"))
+        # Reject embedded TeX environments in the drafting phase.
+        if re.search(r"\\begin\{document\}|\\documentclass\b", draft.markdown or "", re.I):
+            issues.append(
+                ValidationIssue(
+                    code="markdown_contains_latex_document",
+                    message="Markdown draft must not include a LaTeX document preamble",
+                    path="markdown",
+                )
+            )
+
+        titles = markdown_heading_titles(draft.markdown or "")
+        if draft.abstract:
+            # Abstract may live outside headings; require intro/conclusion headings in body.
+            pass
+        for required in sorted(REQUIRED_SECTION_TITLES):
+            if required not in titles:
+                issues.append(
+                    ValidationIssue(
+                        code="missing_required_section",
+                        message=f"Required markdown heading missing: {required}",
+                        path="markdown",
+                    )
+                )
+
+        if outline is not None:
+            for section in outline.sections:
+                title_l = section.title.strip().lower()
+                # Soft check: outline section titles should appear as headings when claims exist.
+                if section.claim_ids and title_l and title_l not in titles:
+                    issues.append(
+                        ValidationIssue(
+                            code="missing_outline_section",
+                            message=f"Markdown missing outline section heading {section.title!r}",
+                            path=f"markdown.{section.section_id}",
+                            severity="warning",
+                        )
+                    )
+
+        cited_keys = extract_markdown_citation_keys(draft.markdown or "")
+        cited_keys |= set(draft.bibliography_keys)
+
+        for claim_id in draft.claim_ids:
+            claim = await self.claims.get(claim_id)
+            if claim is None:
+                issues.append(
+                    ValidationIssue(
+                        code="unknown_claim",
+                        message=f"Claim {claim_id} not found",
+                        path="claim_ids",
+                    )
+                )
+            elif claim.status != ClaimStatus.APPROVED:
+                issues.append(
+                    ValidationIssue(
+                        code="claim_not_approved",
+                        message=f"Claim {claim_id} has status {claim.status}",
+                        path="claim_ids",
+                    )
+                )
+
+        for key in sorted(cited_keys):
+            citation = citation_map.get(key)
+            if citation is None:
+                issues.append(
+                    ValidationIssue(
+                        code="unresolved_citation",
+                        message=f"Citation key {key!r} does not resolve",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+                continue
+            issues.extend(_check_bib_consistency(citation, path=f"citation_keys.{key}"))
+            if not citation.claim_id:
+                issues.append(
+                    ValidationIssue(
+                        code="citation_missing_claim",
+                        message=f"Citation {key} is not bound to a claim",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+                continue
+            claim = await self.claims.get(citation.claim_id)
+            if claim is None or claim.status != ClaimStatus.APPROVED:
+                issues.append(
+                    ValidationIssue(
+                        code="citation_claim_not_approved",
+                        message=f"Citation {key} bound to missing/non-approved claim",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+                continue
+            if not citation.evidence_id:
+                issues.append(
+                    ValidationIssue(
+                        code="invented_source",
+                        message=f"Citation {key} has no evidence (invented source)",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+                continue
+            evidence = await self.evidence.get(citation.evidence_id)
+            if evidence is None:
+                issues.append(
+                    ValidationIssue(
+                        code="evidence_missing",
+                        message=f"Evidence missing for citation {key}",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+                continue
+            if evidence.content_hash != quote_content_hash(evidence.quote):
+                issues.append(
+                    ValidationIssue(
+                        code="invented_quotation",
+                        message=f"Evidence hash mismatch for citation {key}",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+            version = await self.documents.get_version(evidence.document_version_id)
+            if version is None:
+                issues.append(
+                    ValidationIssue(
+                        code="document_version_missing",
+                        message=f"Archived version missing for citation {key}",
+                        path=f"citation_keys.{key}",
+                    )
+                )
+                continue
+            if (
+                citation.document_content_sha256
+                and citation.document_content_sha256 != version.content_sha256
+            ):
+                issues.append(
+                    ValidationIssue(
+                        code="document_hash_mismatch",
+                        message=f"Archived document hash changed for citation {key}",
+                        path=f"citation_keys.{key}",
+                    )
+                )
             normalized = await self.verifier.get_normalized_text(evidence.document_version_id)
             segment_text = None
             if evidence.document_segment_id:

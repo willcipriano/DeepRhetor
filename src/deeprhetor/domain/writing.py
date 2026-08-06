@@ -41,6 +41,40 @@ class StructuredDraft(IdentifiedModel):
     bibliography_keys: list[str] = Field(default_factory=list)
 
 
+class MarkdownDraft(IdentifiedModel):
+    """Frontier drafting output: scholarly Markdown with typed citation markers.
+
+    Citation markers use pandoc-style ``[@cite_key]`` (also accept ``[^cite_key]``).
+    The frontier writer must not emit LaTeX; typesetting is a later AI phase.
+    """
+
+    format: str = "markdown"
+    outline_id: str
+    title: str
+    abstract: str | None = None
+    markdown: str
+    bibliography_keys: list[str] = Field(default_factory=list)
+    claim_ids: list[str] = Field(default_factory=list)
+
+
+class TypesetSection(DomainModel):
+    """LaTeX body fragment for one section (no preamble)."""
+
+    section_id: str
+    title: str
+    body_latex: str
+    order: int = 0
+
+
+class TypesetDocument(DomainModel):
+    """AI typesetter output: section bodies for the curated scholarly template."""
+
+    title: str
+    abstract_latex: str | None = None
+    sections: list[TypesetSection] = Field(default_factory=list)
+    bibliography_keys: list[str] = Field(default_factory=list)
+
+
 class BibEntry(DomainModel):
     """Deterministic bibliography metadata for a citation key."""
 

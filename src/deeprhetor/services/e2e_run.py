@@ -39,9 +39,10 @@ class E2EResult:
     bib_path: Path | None
     manifest_path: Path | None
     pdf_path: Path | None
-    supervisor_fallback: bool
-    supervisor_error: str | None
-    worker_summaries: list[dict[str, Any]]
+    markdown_path: Path | None = None
+    supervisor_fallback: bool = False
+    supervisor_error: str | None = None
+    worker_summaries: list[dict[str, Any]] | None = None
 
 
 async def run_end_to_end(
@@ -133,14 +134,14 @@ async def run_end_to_end(
     from deeprhetor.services.llm_writer import OpenRouterWriter
 
     writer = OpenRouterWriter(config=cfg, engine=opened.engine)
-    stored_draft, citation_map = await writer.build_and_persist(
+    stored_draft, citation_map, markdown_draft = await writer.build_and_persist(
         project_id=project_id,
         outline=stored_outline.outline,
         abstract=f"Evidence-backed report for: {prompt}",
     )
-    publisher = PublicationService(opened.engine)
-    publication = await publisher.publish(
-        stored_draft.draft,
+    publisher = PublicationService(opened.engine, config=cfg)
+    publication = await publisher.publish_markdown(
+        markdown_draft,
         project_id=project_id,
         outline=stored_outline.outline,
         citation_map=citation_map,
@@ -149,7 +150,10 @@ async def run_end_to_end(
     )
 
     artifacts = ArtifactRepository(opened.engine)
-    tex_path = bib_path = manifest_path = pdf_path = None
+    tex_path = bib_path = manifest_path = pdf_path = md_path = None
+    if publication.markdown:
+        md_path = export / "report.md"
+        md_path.write_text(publication.markdown, encoding="utf-8")
     if publication.tex_artifact_id:
         data = await artifacts.get_data(publication.tex_artifact_id)
         if data:
@@ -185,6 +189,8 @@ async def run_end_to_end(
         "claim_proposer_error": getattr(live["proposer"], "last_error", None),
         "writer_fallback": getattr(writer, "used_fallback", False),
         "writer_error": getattr(writer, "last_error", None),
+        "typesetter_fallback": getattr(publisher.typesetter, "used_fallback", False),
+        "typesetter_error": getattr(publisher.typesetter, "last_error", None),
         "worker_results": getattr(live["worker"], "results", []),
     }
     (export / "e2e_summary.json").write_text(
@@ -206,6 +212,7 @@ async def run_end_to_end(
         bib_path=bib_path,
         manifest_path=manifest_path,
         pdf_path=pdf_path,
+        markdown_path=md_path,
         supervisor_fallback=bool(getattr(live["supervisor"], "used_fallback", False)),
         supervisor_error=getattr(live["supervisor"], "last_error", None),
         worker_summaries=list(getattr(live["worker"], "results", [])),

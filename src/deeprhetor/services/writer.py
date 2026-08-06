@@ -9,6 +9,7 @@ from deeprhetor.domain.writing import (
     BibEntry,
     CitationKey,
     DraftSection,
+    MarkdownDraft,
     Outline,
     StructuredDraft,
 )
@@ -177,6 +178,57 @@ class WriterService:
             abstract=abstract,
             sections=sections,
             bibliography_keys=bib_keys,
+        )
+
+    def build_markdown(
+        self,
+        *,
+        outline: Outline,
+        project_id: str,
+        citation_map: dict[str, CitationKey],
+        abstract: str | None = None,
+        claims_by_id: dict[str, StoredClaim] | None = None,
+    ) -> MarkdownDraft:
+        """Deterministic Markdown draft (fallback when frontier writer unavailable)."""
+        citations_by_claim = {
+            c.claim_id: c for c in citation_map.values() if c.claim_id
+        }
+        lines: list[str] = [f"# {outline.title}", ""]
+        if abstract:
+            lines.extend([abstract, ""])
+        bib_keys: list[str] = []
+        claim_ids: list[str] = []
+        for section in sorted(outline.sections, key=lambda s: s.order):
+            lines.append(f"## {section.title}")
+            lines.append("")
+            if not section.claim_ids:
+                lines.append(
+                    section.notes
+                    or f"This section frames {section.title.lower()} for the research objective."
+                )
+                lines.append("")
+                continue
+            parts: list[str] = []
+            for claim_id in section.claim_ids:
+                claim = (claims_by_id or {}).get(claim_id)
+                cite = citations_by_claim.get(claim_id)
+                if cite is None:
+                    continue
+                statement = claim.statement if claim is not None else cite.bib.title
+                parts.append(f"{statement.rstrip('.')} [@{cite.key}].")
+                if cite.key not in bib_keys:
+                    bib_keys.append(cite.key)
+                if claim_id not in claim_ids:
+                    claim_ids.append(claim_id)
+            lines.append(" ".join(parts) if parts else (section.notes or ""))
+            lines.append("")
+        return MarkdownDraft(
+            outline_id=outline.id,
+            title=outline.title,
+            abstract=abstract,
+            markdown="\n".join(lines).strip() + "\n",
+            bibliography_keys=bib_keys,
+            claim_ids=claim_ids,
         )
 
     async def build_and_persist(
