@@ -5,6 +5,10 @@ __pycache__/
 .venv/
 venv/
 .env
+# Local secrets (never commit)
+tav api key
+*api key*
+*api_key*
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
