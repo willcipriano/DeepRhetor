@@ -36,11 +36,14 @@ class LocalFileImporter:
         title: str | None = None,
         source_class: str = "local",
         index_fts: bool = True,
+        max_bytes: int | None = None,
     ) -> tuple[Document, DocumentVersion, list[DocumentSegment]]:
         file_path = Path(path)
         if not file_path.is_file():
             raise FileNotFoundError(str(file_path))
         content = file_path.read_bytes()
+        if max_bytes is not None and len(content) > max_bytes:
+            raise ValueError(f"file exceeds max_bytes {max_bytes}")
         media_type = guess_media_type(file_path.name)
         raw = RawDocument(
             content=content,
@@ -54,6 +57,7 @@ class LocalFileImporter:
             project_id=project_id,
             source_class=source_class,
             index_fts=index_fts,
+            max_bytes=max_bytes,
         )
 
     async def import_raw(
@@ -64,7 +68,10 @@ class LocalFileImporter:
         source_class: str = "local",
         index_fts: bool = True,
         canonical_url: str | None = None,
+        max_bytes: int | None = None,
     ) -> tuple[Document, DocumentVersion, list[DocumentSegment]]:
+        if max_bytes is not None and len(raw.content) > max_bytes:
+            raise ValueError(f"file exceeds max_bytes {max_bytes}")
         parsed = await self._parsers.parse(raw)
         return await self._repo.archive_parsed(
             project_id=project_id,
