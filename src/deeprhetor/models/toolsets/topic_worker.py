@@ -149,7 +149,24 @@ def build_topic_worker_toolset() -> FunctionToolset[AgentDeps]:
         ctx: RunContext[AgentDeps],
         scan_json: dict[str, Any],
     ) -> dict[str, Any]:
-        """Record a segment scan result into scratch."""
+        """Record a segment scan result (persists when ScanRepository is bound)."""
+        if ctx.deps.scans is not None:
+            recorded = await ctx.deps.scans.record_segment_scan(
+                document_segment_id=scan_json["segment_id"],
+                status=scan_json.get("status", "completed"),
+                document_id=scan_json["document_id"],
+                document_version_id=scan_json["document_version_id"],
+                summary=scan_json.get("summary"),
+                proposed_claim_ids=list(scan_json.get("proposed_claim_ids") or []),
+                warnings=list(scan_json.get("warnings") or []),
+                batch_index=int(scan_json.get("batch_index") or 0),
+                task_id=ctx.deps.task_id,
+            )
+            await ctx.deps.scans.refresh_document_scan(
+                document_version_id=scan_json["document_version_id"],
+                document_id=scan_json["document_id"],
+            )
+            return {"ok": True, "scan": recorded.model_dump(mode="json")}
         scans = ctx.deps.scratch.setdefault("segment_scans", [])
         scans.append(scan_json)
         return {"ok": True, "scan": scan_json}
@@ -160,7 +177,21 @@ def build_topic_worker_toolset() -> FunctionToolset[AgentDeps]:
         document_id: str,
         summary_json: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Mark a document scan complete in scratch."""
+        """Refresh document-scan accounting; complete only when all segments are terminal."""
+        if ctx.deps.scans is not None and ctx.deps.documents is not None:
+            version = await ctx.deps.documents.latest_version(document_id)
+            if version is None:
+                return {"ok": False, "error": "document_version_not_found", "document_id": document_id}
+            record = await ctx.deps.scans.refresh_document_scan(
+                document_version_id=version.id,
+                document_id=document_id,
+            )
+            return {
+                "ok": True,
+                "document_id": document_id,
+                "is_complete": record.is_complete,
+                "summary": record.summary.model_dump(mode="json") if record.summary else summary_json,
+            }
         completed = ctx.deps.scratch.setdefault("completed_scans", {})
         completed[document_id] = summary_json or {"is_complete": True}
         return {"ok": True, "document_id": document_id, "summary": completed[document_id]}
@@ -171,6 +202,16 @@ def build_topic_worker_toolset() -> FunctionToolset[AgentDeps]:
         claim_json: dict[str, Any],
     ) -> dict[str, Any]:
         """Propose a claim for later verification."""
+        if ctx.deps.claims is not None:
+            from deeprhetor.domain.knowledge import ProposedClaim
+
+            claim = ProposedClaim.model_validate(claim_json)
+            stored = await ctx.deps.claims.create(
+                claim,
+                project_id=ctx.deps.project_id,
+                run_id=ctx.deps.run_id,
+            )
+            return {"ok": True, "claim": stored.claim.model_dump(mode="json")}
         claims = ctx.deps.scratch.setdefault("proposed_claims", [])
         claims.append(claim_json)
         return {"ok": True, "claim": claim_json}
@@ -181,7 +222,38 @@ def build_topic_worker_toolset() -> FunctionToolset[AgentDeps]:
         claim_id: str,
         evidence_json: dict[str, Any],
     ) -> dict[str, Any]:
-        """Attach evidence metadata to a proposed claim in scratch."""
+        """Attach evidence to a proposed claim (persists when repos are bound)."""
+        if ctx.deps.evidence is not None and ctx.deps.claims is not None:
+            from deeprhetor.domain.enums import EvidenceDirectness, EvidenceRelation
+            from deeprhetor.domain.knowledge import Evidence
+
+            relation_raw = evidence_json.get("relation", EvidenceRelation.SUPPORTS)
+            directness_raw = evidence_json.get("directness", EvidenceDirectness.DIRECT)
+            explanation = str(evidence_json.get("explanation", ""))
+            relation = EvidenceRelation(relation_raw)
+            directness = EvidenceDirectness(directness_raw)
+            payload = {
+                k: v
+                for k, v in evidence_json.items()
+                if k not in {"relation", "directness", "explanation"}
+            }
+            evidence = Evidence.model_validate(payload).ensure_content_hash()
+            stored = await ctx.deps.evidence.create(evidence)
+            link = await ctx.deps.claims.attach_evidence(
+                claim_id,
+                stored.id,
+                relation=relation,
+                directness=directness,
+                explanation=explanation,
+            )
+            return {
+                "ok": True,
+                "link": {
+                    "claim_id": claim_id,
+                    "evidence": stored.model_dump(mode="json"),
+                    "relation": str(link.relation),
+                },
+            }
         links = ctx.deps.scratch.setdefault("claim_evidence", [])
         entry = {"claim_id": claim_id, "evidence": evidence_json}
         links.append(entry)

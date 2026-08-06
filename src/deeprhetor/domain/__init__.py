@@ -23,8 +23,11 @@ from .enums import (
 from .knowledge import (
     ClaimEvidenceLink,
     ClaimRelation,
+    Evidence,
+    EvidenceLocation,
     ProposedClaim,
     VerificationDecision,
+    quote_content_hash,
 )
 from .planning import (
     CoverageGapRequest,
@@ -55,7 +58,9 @@ __all__ = [
     "CoverageReport",
     "DocumentScanSummary",
     "DraftSection",
+    "Evidence",
     "EvidenceDirectness",
+    "EvidenceLocation",
     "EvidenceRelation",
     "FetchRequest",
     "FetchResult",
@@ -72,6 +77,7 @@ __all__ = [
     "RawDocument",
     "RelevanceAssessment",
     "ResearchPlan",
+    "quote_content_hash",
     "RhetoricalPosture",
     "RunStatus",
     "SearchHit",

@@ -279,6 +279,57 @@ class DocumentRepository(BaseRepository):
             metadata=loads_json(row["metadata_json"]),
         )
 
+    async def list_for_project(self, project_id: str) -> list[Document]:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, project_id, canonical_url, title, media_type, source_class, "
+                    "created_at, metadata_json FROM document WHERE project_id = :pid "
+                    "ORDER BY created_at"
+                ),
+                {"pid": project_id},
+            )
+            rows = result.mappings().all()
+        return [
+            Document(
+                id=row["id"],
+                project_id=row["project_id"],
+                canonical_url=row["canonical_url"],
+                title=row["title"],
+                media_type=row["media_type"],
+                source_class=row["source_class"],
+                created_at=parse_dt(row["created_at"]) or utcnow(),
+                metadata=loads_json(row["metadata_json"]),
+            )
+            for row in rows
+        ]
+
+    async def latest_version(self, document_id: str) -> DocumentVersion | None:
+        async with self.connection() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT id, document_id, version, original_url, content_sha256, "
+                    "normalized_sha256, parser, parser_version, created_at "
+                    "FROM document_version WHERE document_id = :did "
+                    "ORDER BY version DESC LIMIT 1"
+                ),
+                {"did": document_id},
+            )
+            row = result.mappings().first()
+        if row is None:
+            return None
+        return DocumentVersion(
+            id=row["id"],
+            document_id=row["document_id"],
+            version=row["version"],
+            original_url=row["original_url"],
+            content_sha256=row["content_sha256"],
+            normalized_sha256=row["normalized_sha256"],
+            parser=row["parser"],
+            parser_version=row["parser_version"],
+            created_at=parse_dt(row["created_at"]) or utcnow(),
+        )
+
     async def list_segments(self, document_version_id: str) -> list[DocumentSegment]:
         async with self.connection() as conn:
             result = await conn.execute(

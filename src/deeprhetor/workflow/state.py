@@ -12,6 +12,10 @@ WorkflowStage = Literal[
     "dispatching",
     "working",
     "joined",
+    "scanning",
+    "proposing",
+    "verifying",
+    "criticizing",
     "completed",
 ]
 
@@ -31,3 +35,9 @@ class WorkflowState(TypedDict):
     plan_feedback: NotRequired[str | None]
     # Opaque plan row id only — never the full ResearchPlan payload.
     plan_id: NotRequired[str | None]
+    # Stage 7 knowledge-loop control (IDs and counters only).
+    critic_pass: NotRequired[int]
+    research_complete: NotRequired[bool]
+    gap_request_ids: NotRequired[list[str]]
+    document_ids: NotRequired[list[str]]
+    claim_ids: NotRequired[list[str]]

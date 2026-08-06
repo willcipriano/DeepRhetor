@@ -11,7 +11,21 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from deeprhetor.domain.enums import PlanStatus, RhetoricalPosture
-from deeprhetor.domain.planning import PlanSection, PlanTopic, ResearchPlan, WorkerAssignment
+from deeprhetor.domain.knowledge import (
+    Evidence,
+    EvidenceLocation,
+    ProposedClaim,
+    quote_content_hash,
+)
+from deeprhetor.domain.planning import (
+    CoverageReport,
+    PlanSection,
+    PlanTopic,
+    ResearchPlan,
+)
+from deeprhetor.repositories.document import DocumentRepository
+from deeprhetor.repositories.knowledge import ClaimRepository, EvidenceRepository
+from deeprhetor.services.critic import CriticLoopState, CriticPassResult
 
 
 class SupervisorAgent(Protocol):
@@ -27,6 +41,34 @@ class SupervisorAgent(Protocol):
 
 class TopicWorkerAgent(Protocol):
     async def acknowledge(self, assignment: dict[str, Any]) -> dict[str, Any]: ...
+
+
+class KnowledgeProposer(Protocol):
+    async def propose_for_plan(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        plan: ResearchPlan,
+        documents: DocumentRepository,
+        claims: ClaimRepository,
+        evidence: EvidenceRepository,
+    ) -> list[str]:
+        """Return newly proposed claim IDs."""
+        ...
+
+
+class CoverageCriticAgent(Protocol):
+    async def judge(
+        self,
+        *,
+        plan: ResearchPlan,
+        project_id: str,
+        plan_id: str | None,
+        run_id: str | None,
+        state: CriticLoopState,
+        critic_service: Any,
+    ) -> CriticPassResult: ...
 
 
 @dataclass
@@ -110,6 +152,105 @@ class FakeTopicWorker:
             "provider": assignment.get("provider_or_class"),
         }
         self.acknowledgements.append(result)
+        return result
+
+
+@dataclass
+class FakeKnowledgeProposer:
+    """Propose one grounded claim per plan topic using archived segments when present."""
+
+    proposed_ids: list[str] = field(default_factory=list)
+
+    async def propose_for_plan(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        plan: ResearchPlan,
+        documents: DocumentRepository,
+        claims: ClaimRepository,
+        evidence: EvidenceRepository,
+    ) -> list[str]:
+        docs = await documents.list_for_project(project_id)
+        claim_ids: list[str] = []
+        for topic in plan.topics:
+            statement = f"Claim covering {topic.title}"
+            claim = ProposedClaim(
+                statement=statement,
+                topic_id=topic.topic_id,
+                project_id=project_id,
+                run_id=run_id,
+            )
+            stored = await claims.create(claim, project_id=project_id, run_id=run_id)
+            if docs:
+                version = await documents.latest_version(docs[0].id)
+                if version is not None:
+                    segs = await documents.list_segments(version.id)
+                    if segs:
+                        quote = segs[0].text[: min(80, len(segs[0].text))]
+                        if quote:
+                            ev = Evidence(
+                                document_id=docs[0].id,
+                                document_version_id=version.id,
+                                document_segment_id=segs[0].id,
+                                quote=quote,
+                                location=EvidenceLocation(
+                                    char_start=segs[0].char_start or 0,
+                                    char_end=(segs[0].char_start or 0) + len(quote),
+                                ),
+                                content_hash=quote_content_hash(quote),
+                            )
+                            created = await evidence.create(ev)
+                            await claims.attach_evidence(stored.id, created.id)
+            claim_ids.append(stored.id)
+        self.proposed_ids.extend(claim_ids)
+        return claim_ids
+
+
+@dataclass
+class FakeCoverageCritic:
+    """Test doubles for coverage judgment.
+
+    ``force_complete=True`` (default) ends the Stage 5-compatible path without
+    requiring a full claim inventory. Set False to use CoverageCriticService.
+    """
+
+    force_complete: bool = True
+    judgments: list[CriticPassResult] = field(default_factory=list)
+
+    async def judge(
+        self,
+        *,
+        plan: ResearchPlan,
+        project_id: str,
+        plan_id: str | None,
+        run_id: str | None,
+        state: CriticLoopState,
+        critic_service: Any,
+    ) -> CriticPassResult:
+        if self.force_complete:
+            state.pass_count += 1
+            state.is_complete = True
+            state.terminated_reason = "complete"
+            report = CoverageReport(
+                plan_id=plan_id or plan.id,
+                plan_version=plan.version,
+                is_complete=True,
+                covered_section_ids=[s.section_id for s in plan.sections],
+                notes=["fake critic force_complete"],
+            )
+            state.last_report = report
+            result = CriticPassResult(report=report, state=state, should_continue=False)
+            self.judgments.append(result)
+            return result
+        result = await critic_service.evaluate(
+            plan=plan,
+            project_id=project_id,
+            plan_id=plan_id,
+            run_id=run_id,
+            state=state,
+        )
+        self.judgments.append(result)
         return result
 
 

@@ -6,14 +6,19 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from deeprhetor.repositories.document import DocumentRepository
+from deeprhetor.repositories.knowledge import ClaimRepository, EvidenceRepository
 from deeprhetor.repositories.operations import (
     EventRepository,
     ModelCallRepository,
     UsageRecordRepository,
 )
 from deeprhetor.repositories.project import ProjectRepository
+from deeprhetor.repositories.scan import ScanRepository
 from deeprhetor.repositories.workflow import RunRepository, TaskRepository
+from deeprhetor.services.critic import CoverageCriticService
 from deeprhetor.services.fts import FtsService
+from deeprhetor.services.scan import ScanService
+from deeprhetor.services.verify import VerifierService
 
 
 class SearchPlugin(Protocol):
@@ -40,6 +45,12 @@ class AgentDeps:
     runs: RunRepository | None = None
     tasks: TaskRepository | None = None
     documents: DocumentRepository | None = None
+    claims: ClaimRepository | None = None
+    evidence: EvidenceRepository | None = None
+    scans: ScanRepository | None = None
+    scan_service: ScanService | None = None
+    verifier: VerifierService | None = None
+    critic: CoverageCriticService | None = None
     model_calls: ModelCallRepository | None = None
     usage_records: UsageRecordRepository | None = None
     events: EventRepository | None = None
@@ -47,5 +58,5 @@ class AgentDeps:
     # Stage 3 plugins — optional; search/fetch tools error clearly when absent.
     search_plugins: dict[str, SearchPlugin] = field(default_factory=dict)
     fetch_plugins: dict[str, FetchPlugin] = field(default_factory=dict)
-    # Scratch space for in-memory stubs until knowledge repos land.
+    # Scratch space for in-memory stubs / tool scratchpad.
     scratch: dict[str, Any] = field(default_factory=dict)

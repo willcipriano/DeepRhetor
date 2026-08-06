@@ -1,10 +1,14 @@
-"""Thin LangGraph workflow scheduler (Stage 5)."""
+"""Thin LangGraph workflow scheduler (Stage 5+)."""
 
 from __future__ import annotations
 
 from deeprhetor.workflow.agents import (
+    CoverageCriticAgent,
+    FakeCoverageCritic,
+    FakeKnowledgeProposer,
     FakeSupervisor,
     FakeTopicWorker,
+    KnowledgeProposer,
     PydanticSupervisor,
     SupervisorAgent,
     TopicWorkerAgent,
@@ -28,8 +32,12 @@ from deeprhetor.workflow.state import ApprovalAction, WorkflowStage, WorkflowSta
 
 __all__ = [
     "ApprovalAction",
+    "CoverageCriticAgent",
+    "FakeCoverageCritic",
+    "FakeKnowledgeProposer",
     "FakeSupervisor",
     "FakeTopicWorker",
+    "KnowledgeProposer",
     "ProjectSqliteSaver",
     "PydanticSupervisor",
     "SupervisorAgent",
